@@ -44,18 +44,14 @@ import { TopCommandBar } from "@/components/layout/top-command-bar";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { useStatuses } from "@/hooks/use-statuses";
 import { getColorHex } from "@/lib/utils";
-import { EditStatusDialog } from "@/components/kanban/edit-status-dialog";
-import { DeleteStatusDialog } from "@/components/kanban/delete-status-dialog";
 import { ManageTagsDialog } from "@/components/tags/manage-tags-dialog";
 import { useTags } from "@/hooks/use-tags";
-import { Tag } from "@/types/crm";
-import { Status } from "@/types/crm";
 import "./App.css";
 
 function Dashboard() {
   const navigate = useNavigate();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const { statuses, refreshStatuses, editStatus, removeStatus } = useStatuses();
+  const { statuses, refreshStatuses } = useStatuses();
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [loading, setLoading] = useState(true);
   // const [sheetOpen, setSheetOpen] = useState(false); // No sheet anymore
@@ -207,8 +203,7 @@ function Dashboard() {
     // Fix orphan contacts on startup
     const init = async () => {
       try {
-        const result = await invoke<string>("fix_orphan_contacts");
-        console.log("[App] Orphan fix:", result);
+        await invoke<string>("fix_orphan_contacts");
       } catch (err) {
         console.error("[App] Failed to fix orphans:", err);
       }

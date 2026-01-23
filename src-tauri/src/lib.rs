@@ -92,27 +92,6 @@ async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, 
     .await
     .map_err(|e: sqlx::Error| e.to_string())?;
 
-    println!("[DEBUG] get_contacts: Fetched {} contacts", contacts.len());
-
-    // Count status_id distribution
-    let null_count = contacts.iter().filter(|c| c.status_id.is_none()).count();
-    let stat_new_count = contacts
-        .iter()
-        .filter(|c| c.status_id.as_deref() == Some("stat-new"))
-        .count();
-    let other_count = contacts.len() - null_count - stat_new_count;
-    println!(
-        "[DEBUG] Status distribution: NULL={}, stat-new={}, other={}",
-        null_count, stat_new_count, other_count
-    );
-
-    if let Some(first) = contacts.first() {
-        println!(
-            "[DEBUG] First contact status_id: {:?}, status_label: {:?}",
-            first.status_id, first.status_label
-        );
-    }
-
     // 2. Fetch All Tag Assignments
     // We fetch (contact_id, tag_id, tag_name, tag_color)
     #[derive(sqlx::FromRow)]
@@ -134,11 +113,6 @@ async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, 
     .fetch_all(pool)
     .await
     .map_err(|e: sqlx::Error| e.to_string())?;
-
-    println!(
-        "[DEBUG] get_contacts: Fetched {} tag assignments",
-        assignments.len()
-    );
 
     // 3. Group Tags by Contact ID
     use std::collections::HashMap;
@@ -164,11 +138,6 @@ async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, 
             ContactWithTags { contact: c, tags }
         })
         .collect();
-
-    println!(
-        "[DEBUG] get_contacts: Returning {} contacts with tags",
-        result.len()
-    );
 
     Ok(result)
 }
@@ -314,10 +283,6 @@ async fn update_contact(
     company_website: Option<String>,
 ) -> Result<(), String> {
     let pool = db.pool();
-    println!(
-        "Updating contact: id={}, first_name={:?}, last_name={:?}, email={:?}, status_id={:?}",
-        id, first_name, last_name, email, status_id
-    );
 
     let result = sqlx::query(
         r#"
@@ -356,11 +321,6 @@ async fn update_contact(
     .execute(pool)
     .await;
 
-    match &result {
-        Ok(res) => println!("Update successful, rows affected: {}", res.rows_affected()),
-        Err(e) => println!("Update failed: {:?}", e),
-    }
-
     result.map_err(|e: sqlx::Error| e.to_string())?;
     Ok(())
 }
@@ -383,11 +343,8 @@ pub fn run() {
             let db_path = app_dir.join("outreach.db");
             let db_path_str = db_path.to_str().expect("invalid path");
 
-            println!("[DEBUG] DB path: {}", db_path_str);
-
             let db = tauri::async_runtime::block_on(async {
                 let result = Db::new(db_path_str).await.expect("failed to init core");
-                println!("[DEBUG] DB initialized and migrations ran successfully");
                 result
             });
 
@@ -486,10 +443,6 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, String>
         .await
         .map_err(|e| e.to_string())?;
 
-    println!(
-        "[DEBUG] fix_orphan_contacts: Fixed {} orphan contacts",
-        before.0
-    );
     Ok(format!("Fixed {} orphan contacts", before.0))
 }
 
