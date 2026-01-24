@@ -3,11 +3,21 @@ use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
 
+/// Task type to determine which AI model to use
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AiTask {
+    EmailDraft,
+    SubjectLine,
+    ProfileAnalysis,
+    MagicPaste,
+    Icebreakers,
+}
+
 /// Enum to select which AI provider to use
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AiProvider {
-    Ollama,
-    OpenRouter,
+    Ollama,     // Local Llama 3.2
+    OpenRouter, // Gemini 2.0 Flash via OpenRouter
 }
 
 /// Configuration for AI requests
@@ -16,7 +26,10 @@ pub struct AiConfig {
     pub provider: AiProvider,
     pub ollama_model: String,
     pub openrouter_model: String,
+    pub openrouter_base_url: String,
     pub openrouter_api_key: Option<String>,
+    pub custom_draft_prompt: Option<String>,
+    pub custom_subject_prompt: Option<String>,
 }
 
 impl Default for AiConfig {
@@ -24,8 +37,28 @@ impl Default for AiConfig {
         Self {
             provider: AiProvider::Ollama,
             ollama_model: "llama3.2".to_string(),
-            openrouter_model: "google/gemini-flash-1.5:free".to_string(),
+            // Gemini 2.0 Flash Experimental via OpenRouter (free tier)
+            openrouter_model: "google/gemini-2.0-flash-exp:free".to_string(),
+            openrouter_base_url: "https://openrouter.ai/api/v1".to_string(),
             openrouter_api_key: None,
+            custom_draft_prompt: None,
+            custom_subject_prompt: None,
+        }
+    }
+}
+
+impl AiConfig {
+    /// Factory for task-based configuration
+    pub fn for_task(task: AiTask, api_key: Option<String>) -> Self {
+        match task {
+            // Complex tasks -> Gemini 2.0 Flash (Cloud)
+            AiTask::EmailDraft | AiTask::SubjectLine | AiTask::ProfileAnalysis => Self {
+                provider: AiProvider::OpenRouter,
+                openrouter_api_key: api_key,
+                ..Default::default()
+            },
+            // Simple/Privacy tasks -> Ollama (Local)
+            AiTask::MagicPaste | AiTask::Icebreakers => Self::default(),
         }
     }
 }
@@ -34,6 +67,12 @@ impl Default for AiConfig {
 #[derive(Debug, Deserialize)]
 struct OpenRouterResponse {
     choices: Vec<OpenRouterChoice>,
+    error: Option<OpenRouterError>, // Handle API errors
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenRouterError {
+    message: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,8 +92,8 @@ struct OllamaResponse {
 }
 
 pub struct AiClient {
-    client: Client,
-    config: AiConfig,
+    pub client: Client,
+    pub config: AiConfig,
 }
 
 impl AiClient {
@@ -65,12 +104,12 @@ impl AiClient {
         }
     }
 
-    /// Create with Ollama as default (for Magic Paste)
+    /// Create with Ollama as default (legacy support)
     pub fn ollama_default() -> Self {
         Self::new(AiConfig::default())
     }
 
-    /// Create with OpenRouter for enrichment
+    /// Create with OpenRouter for enrichment (legacy support)
     pub fn openrouter(api_key: String) -> Self {
         Self::new(AiConfig {
             provider: AiProvider::OpenRouter,
@@ -99,7 +138,7 @@ impl AiClient {
                 "stream": false,
                 "options": {
                     "temperature": 0.0,
-                    "num_predict": 256,
+                    "num_predict": 512, // Increased for larger context
                     "top_p": 0.9
                 }
             }))
@@ -116,17 +155,26 @@ impl AiClient {
 
     /// Call OpenRouter API (OpenAI-compatible)
     async fn call_openrouter(&self, prompt: &str) -> Result<String> {
-        let api_key = self
-            .config
-            .openrouter_api_key
-            .as_ref()
-            .ok_or_else(|| anyhow!("OpenRouter API key not configured"))?;
+        let api_key = self.config.openrouter_api_key.as_ref().ok_or_else(|| {
+            anyhow!("OpenRouter API key not configured. Please set it in Settings > AI.")
+        })?;
+
+        let url = format!(
+            "{}/chat/completions",
+            self.config.openrouter_base_url.trim_end_matches('/')
+        );
 
         let response = self
             .client
-            .post("https://openrouter.ai/api/v1/chat/completions")
+            .post(&url)
             .timeout(std::time::Duration::from_secs(60))
             .header("Authorization", format!("Bearer {}", api_key))
+            // Required for OpenRouter to identify your app
+            .header(
+                "HTTP-Referer",
+                "https://github.com/outreach-os/personal-crm",
+            )
+            .header("X-Title", "Personal CRM")
             .header("Content-Type", "application/json")
             .json(&json!({
                 "model": self.config.openrouter_model,
@@ -139,10 +187,15 @@ impl AiClient {
 
         if response.status().is_success() {
             let body: OpenRouterResponse = response.json().await?;
+
+            if let Some(err) = body.error {
+                return Err(anyhow!("OpenRouter API Error: {}", err.message));
+            }
+
             body.choices
                 .first()
                 .map(|c| c.message.content.clone())
-                .ok_or_else(|| anyhow!("No response from OpenRouter"))
+                .ok_or_else(|| anyhow!("No response content from OpenRouter"))
         } else {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();

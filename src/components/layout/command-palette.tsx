@@ -25,9 +25,10 @@ interface CommandPaletteProps {
     onOpenImport?: () => void;
     onOpenAddContact?: () => void;
     onSelectContact?: (id: string) => void;
+    onOpenSettings?: () => void;
 }
 
-export function CommandPalette({ open, onOpenChange, onContactsChanged, onOpenImport, onOpenAddContact, onSelectContact }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, onContactsChanged, onOpenImport, onOpenAddContact, onSelectContact, onOpenSettings }: CommandPaletteProps) {
     const [contacts, setContacts] = useState<Contact[]>([]);
 
     useEffect(() => {
@@ -60,6 +61,9 @@ export function CommandPalette({ open, onOpenChange, onContactsChanged, onOpenIm
             const id = action.replace("view_contact_", "");
             onOpenChange(false);
             onSelectContact?.(id);
+        } else if (action === "navigate_settings") {
+            onOpenChange(false);
+            onOpenSettings?.();
         } else {
             // e.g. navigate_...
             onOpenChange(false);

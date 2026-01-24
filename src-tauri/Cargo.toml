@@ -31,4 +31,5 @@ open = "5"
 tauri-plugin-dialog = "2"
 chrono = { version = "0.4", features = ["serde"] }
 arboard = "3"
+keyring = "3.6.3"
 

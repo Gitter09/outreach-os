@@ -53,6 +53,12 @@ pub mod models {
 
         pub intelligence_summary: Option<String>,
 
+        // AI Insights
+        pub ai_talking_points: Option<String>,
+        pub ai_company_intel: Option<String>,
+        pub ai_last_analyzed: Option<DateTime<Utc>>,
+        pub ai_profile_version: Option<i32>,
+
         // Dates & Cadence
         pub last_interaction_at: Option<DateTime<Utc>>, // kept for history
         pub last_contacted_date: Option<DateTime<Utc>>, // explicit field

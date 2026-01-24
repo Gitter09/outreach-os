@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, RefreshCcw, Mail, Linkedin, Trash2, Search, ListFilter, LayoutList, Columns } from "lucide-react";
+import { UserPlus, RefreshCcw, Mail, Linkedin, Trash2, Search, ListFilter, LayoutList, Columns, Settings } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,9 +37,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
-// import { ContactDetailSheet } from "@/components/contacts/contact-detail-sheet"; // Removing Sheet
 import { ContactDetailPage } from "@/pages/ContactDetailPage";
 import { ImportDialog } from "@/components/import/import-dialog";
+import { AddContactDropdown } from "@/components/contacts/add-contact-dropdown";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { TopCommandBar } from "@/components/layout/top-command-bar";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { useStatuses } from "@/hooks/use-statuses";
@@ -60,6 +61,7 @@ function Dashboard() {
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [addQuickStatusId, setAddQuickStatusId] = useState<string | null>(null);
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -226,6 +228,7 @@ function Dashboard() {
             handleContactClick(contact);
           }
         }}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
       <ImportDialog
         open={importDialogOpen}
@@ -244,14 +247,17 @@ function Dashboard() {
           </div>
           <TopCommandBar onClick={() => setCommandOpen(true)} className="mx-8 flex-1 max-w-md" />
           <div className="flex gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)}>
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button variant="outline" size="sm" onClick={fetchContacts}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
-            <Button size="sm" onClick={() => handleOpenAddContact()}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Contact
-            </Button>
+            <AddContactDropdown
+              onAddManually={() => handleOpenAddContact()}
+              onImportFile={() => setImportDialogOpen(true)}
+            />
           </div>
         </header>
 
@@ -259,7 +265,7 @@ function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-medium">Contacts</CardTitle>
-              <div className="flex gap-2 w-full max-w-sm">
+              <div className="flex gap-2 w-full max-w-lg">
                 <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -551,6 +557,7 @@ function Dashboard() {
         initialStatusId={addQuickStatusId || undefined}
       />
       <ManageTagsDialog open={manageTagsOpen} onOpenChange={setManageTagsOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div >
   );
 }

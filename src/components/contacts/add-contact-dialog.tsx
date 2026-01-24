@@ -182,12 +182,7 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button size="sm">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Add Contact
-                </Button>
-            </DialogTrigger>
+            {/* Trigger removed - controlled externally */}
             <DialogContent
                 className="sm:max-w-[425px]"
                 onCloseAutoFocus={(e) => {
@@ -196,7 +191,7 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
             >
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between pr-8">
                             <DialogTitle>New Contact</DialogTitle>
                             <Button
                                 type="button"

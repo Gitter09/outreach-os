@@ -18,6 +18,7 @@ import {
 import { EditContactDialog } from "@/components/contacts/edit-contact-dialog";
 import { ManageTagsDialog } from "@/components/tags/manage-tags-dialog";
 import { useTags } from "@/hooks/use-tags";
+import { ComposeEmailDialog } from "@/components/email/compose-email-dialog";
 
 export function ContactDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export function ContactDetailPage() {
     const [enriching, setEnriching] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isManageTagsOpen, setIsManageTagsOpen] = useState(false);
+    const [isEmailOpen, setIsEmailOpen] = useState(false);
     // const { statuses } = useStatuses(); // Not used for progress bar anymore
 
     const { tags: availableTags, assignTag, unassignTag } = useTags();
@@ -74,9 +76,7 @@ export function ContactDetailPage() {
     };
 
     const handleEmail = () => {
-        if (contact?.email) {
-            window.open(`mailto:${contact.email}`);
-        }
+        setIsEmailOpen(true);
     };
 
     const handleCopy = () => {
@@ -518,6 +518,12 @@ export function ContactDetailPage() {
             <ManageTagsDialog
                 open={isManageTagsOpen}
                 onOpenChange={setIsManageTagsOpen}
+            />
+
+            <ComposeEmailDialog
+                contact={contact}
+                open={isEmailOpen}
+                onOpenChange={setIsEmailOpen}
             />
         </div >
     );

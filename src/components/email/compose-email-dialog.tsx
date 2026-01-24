@@ -1,5 +1,18 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useEmailAI } from "@/hooks/use-email-ai";
+import {
+    Command,
+    CommandGroup,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -78,6 +91,11 @@ export function ComposeEmailDialog({
     const [sending, setSending] = useState(false);
     const [gmailConnected, setGmailConnected] = useState(false);
     const [connecting, setConnecting] = useState(false);
+
+    // AI State
+    const { draftEmail, generateSubjectLines, drafting, generatingSubjects } = useEmailAI();
+    const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
+    const [suggestionsOpen, setSuggestionsOpen] = useState(false);
 
     // Check Gmail connection status
     useEffect(() => {
@@ -220,14 +238,60 @@ export function ComposeEmailDialog({
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="subject">Subject</Label>
-                                <Input
-                                    id="subject"
-                                    value={subject}
-                                    onChange={(e) => setSubject(e.target.value)}
-                                    placeholder="Email subject"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="subject"
+                                        value={subject}
+                                        onChange={(e) => setSubject(e.target.value)}
+                                        placeholder="Email subject"
+                                    />
+                                    <Popover open={suggestionsOpen} onOpenChange={setSuggestionsOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={async () => {
+                                                    if (!contact) {
+                                                        toast.error("Contact context needed for AI");
+                                                        return;
+                                                    }
+                                                    const lines = await generateSubjectLines(contact.id);
+                                                    setSubjectSuggestions(lines);
+                                                    setSuggestionsOpen(true);
+                                                }}
+                                                disabled={generatingSubjects}
+                                            >
+                                                {generatingSubjects ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Sparkles className="h-4 w-4 text-purple-600" />
+                                                )}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="p-0" align="end">
+                                            <Command>
+                                                <CommandList>
+                                                    <CommandGroup heading="AI Suggestions">
+                                                        {subjectSuggestions.map((suggestion) => (
+                                                            <CommandItem
+                                                                key={suggestion}
+                                                                onSelect={() => {
+                                                                    setSubject(suggestion);
+                                                                    setSuggestionsOpen(false);
+                                                                }}
+                                                            >
+                                                                <Sparkles className="mr-2 h-3 w-3" />
+                                                                {suggestion}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 relative">
                                 <Label htmlFor="body">Message</Label>
                                 <Textarea
                                     id="body"
@@ -237,6 +301,32 @@ export function ComposeEmailDialog({
                                     rows={10}
                                     className="resize-none"
                                 />
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute top-6 right-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                    onClick={async () => {
+                                        if (!contact) {
+                                            toast.error("Contact context needed for AI");
+                                            return;
+                                        }
+                                        const draft = await draftEmail(contact.id);
+                                        setBody(draft);
+                                    }}
+                                    disabled={drafting}
+                                >
+                                    {drafting ? (
+                                        <>
+                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                            Drafting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="mr-1 h-3 w-3" />
+                                            Draft with AI
+                                        </>
+                                    )}
+                                </Button>
                             </div>
                         </div>
                     </div>
