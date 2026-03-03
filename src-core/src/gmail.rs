@@ -6,30 +6,15 @@ use oauth2::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
-use std::path::PathBuf;
 
 const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
-// Scopes: Send, Read/Modify (for sync), UserInfo (for identity)
 const GOOGLE_SCOPES: &[&str] = &[
     "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/userinfo.email",
 ];
-const REDIRECT_PORT: u16 = 8420;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct GoogleCredentials {
-    installed: InstalledCredentials,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct InstalledCredentials {
-    client_id: String,
-    client_secret: String,
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OAuthTokenResponse {
@@ -47,7 +32,6 @@ struct FullTokenResponse {
 
 pub struct GmailClient {
     http_client: Client,
-    credentials_path: PathBuf,
 }
 
 impl Default for GmailClient {
@@ -58,36 +42,26 @@ impl Default for GmailClient {
 
 impl GmailClient {
     pub fn new() -> Self {
-        let credentials_path = dirs::home_dir()
-            .unwrap_or_default()
-            .join(".outreachos")
-            .join("credentials.json");
-
         Self {
             http_client: Client::new(),
-            credentials_path,
         }
     }
 
     fn load_credentials(&self) -> Result<(String, String)> {
-        let content = fs::read_to_string(&self.credentials_path).map_err(|_| {
-            anyhow!(
-                "credentials.json not found at {:?}. Please follow the setup guide.",
-                self.credentials_path
-            )
-        })?;
+        let client_id = crate::crypto::get_credential("gmail", "client_id")
+            .map_err(|_| anyhow!("Gmail credentials not configured. Please add your Google OAuth credentials in Settings."))?;
+        let client_secret = crate::crypto::get_credential("gmail", "client_secret")
+            .map_err(|_| anyhow!("Gmail credentials not configured. Please add your Google OAuth credentials in Settings."))?;
 
-        let creds: GoogleCredentials = serde_json::from_str(&content)
-            .map_err(|_| anyhow!("Invalid credentials.json format"))?;
-
-        Ok((creds.installed.client_id, creds.installed.client_secret))
+        Ok((client_id, client_secret))
     }
 
-    /// Starts the OAuth flow. Returns the authorization URL to open in browser.
-    pub fn get_auth_url(&self) -> Result<(String, PkceCodeVerifier)> {
+    /// Starts the OAuth flow. Returns (auth_url, pkce_verifier, csrf_token).
+    /// The `port` parameter specifies the local redirect port (use 0 for ephemeral).
+    pub fn get_auth_url(&self, port: u16) -> Result<(String, PkceCodeVerifier, CsrfToken)> {
         let (client_id, client_secret) = self.load_credentials()?;
 
-        let redirect_url = format!("http://127.0.0.1:{}", REDIRECT_PORT);
+        let redirect_url = format!("http://127.0.0.1:{}", port);
 
         let client = BasicClient::new(ClientId::new(client_id))
             .set_client_secret(ClientSecret::new(client_secret))
@@ -109,24 +83,36 @@ impl GmailClient {
         auth_req = auth_req.add_extra_param("access_type", "offline");
         auth_req = auth_req.add_extra_param("prompt", "consent");
 
-        let (auth_url, _csrf_token) = auth_req.url();
+        let (auth_url, csrf_token) = auth_req.url();
 
-        Ok((auth_url.to_string(), pkce_verifier))
+        Ok((auth_url.to_string(), pkce_verifier, csrf_token))
     }
 
-    /// Waits for the OAuth callback and extracts the authorization code
-    pub fn wait_for_callback(&self) -> Result<String> {
-        let listener = TcpListener::bind(format!("127.0.0.1:{}", REDIRECT_PORT))?;
-
-        println!("Waiting for OAuth callback on port {}...", REDIRECT_PORT);
+    /// Waits for the OAuth callback on a pre-bound listener and extracts the authorization code.
+    /// Validates the CSRF `state` parameter against the expected token.
+    pub fn wait_for_callback(
+        &self,
+        listener: TcpListener,
+        expected_csrf: &CsrfToken,
+    ) -> Result<String> {
+        println!("Waiting for OAuth callback...");
 
         for mut stream in listener.incoming().flatten() {
             let mut reader = BufReader::new(&stream);
             let mut request_line = String::new();
             reader.read_line(&mut request_line)?;
 
-            // Extract code from: GET /?code=XXX&scope=... HTTP/1.1
-            if let Some(code) = extract_code_from_request(&request_line) {
+            // Extract code and state from: GET /?code=XXX&state=YYY&scope=... HTTP/1.1
+            if let Some((code, state)) = extract_code_and_state_from_request(&request_line) {
+                // Validate CSRF state token
+                if state != *expected_csrf.secret() {
+                    let response = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\n\r\n\
+                        <html><body><h1>✗ CSRF validation failed</h1>\
+                        <p>The OAuth callback state does not match. Please try again.</p></body></html>";
+                    stream.write_all(response.as_bytes())?;
+                    return Err(anyhow!("OAuth CSRF token mismatch — possible attack"));
+                }
+
                 // Send success response
                 let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\
                         <html><body><h1>✓ Authorization Successful!</h1>\
@@ -145,9 +131,10 @@ impl GmailClient {
         &self,
         code: String,
         pkce_verifier: PkceCodeVerifier,
+        port: u16,
     ) -> Result<OAuthTokenResponse> {
         let (client_id, client_secret) = self.load_credentials()?;
-        let redirect_url = format!("http://127.0.0.1:{}", REDIRECT_PORT);
+        let redirect_url = format!("http://127.0.0.1:{}", port);
 
         let params = [
             ("client_id", client_id.as_str()),
@@ -610,14 +597,22 @@ fn strip_html_tags(html: &str) -> String {
     collapsed.trim().to_string()
 }
 
-fn extract_code_from_request(request_line: &str) -> Option<String> {
+fn extract_code_and_state_from_request(request_line: &str) -> Option<(String, String)> {
     let url_part = request_line.split_whitespace().nth(1)?;
     let url = url::Url::parse(&format!("http://localhost{}", url_part)).ok()?;
 
+    let mut code = None;
+    let mut state = None;
     for (key, value) in url.query_pairs() {
         if key == "code" {
-            return Some(value.to_string());
+            code = Some(value.to_string());
+        }
+        if key == "state" {
+            state = Some(value.to_string());
         }
     }
-    None
+    match (code, state) {
+        (Some(c), Some(s)) => Some((c, s)),
+        _ => None,
+    }
 }

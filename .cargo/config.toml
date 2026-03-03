@@ -1,0 +1,5 @@
+[env]
+# Force sqlx to link against libsqlcipher instead of libsqlite3.
+# SQLCipher provides AES-256-CBC page-level encryption for the database file.
+# SQLCipher must be installed on the system (brew install sqlcipher / libsqlcipher-dev).
+SQLX_SQLITE_USE_SQLCIPHER = "1"

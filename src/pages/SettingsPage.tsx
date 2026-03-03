@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { EmailSettingsTab } from "@/components/settings/email-settings-tab";
+import { SecuritySettingsTab } from "@/components/settings/security-settings-tab";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -17,13 +18,14 @@ import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { PageHeader } from "@/components/layout/page-header";
 
-type SettingsTab = "email" | "appearance" | "pipeline" | "data";
+type SettingsTab = "email" | "appearance" | "pipeline" | "data" | "security";
 
 const tabTitles: Record<SettingsTab, string> = {
     email: "Email Integration",
     appearance: "Appearance",
     pipeline: "Pipeline",
     data: "Data",
+    security: "Security",
 };
 
 export function SettingsPage() {
@@ -238,6 +240,7 @@ export function SettingsPage() {
             case "appearance": return renderAppearanceContent();
             case "pipeline": return <div className="p-4 text-muted-foreground">Pipeline configuration coming soon.</div>;
             case "data": return renderDataContent();
+            case "security": return <SecuritySettingsTab />;
             default: return renderAppearanceContent();
         }
     };

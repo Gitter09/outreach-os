@@ -1,13 +1,23 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
+  "description": "Capability for the main window — least-privilege",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
-    "opener:default",
-    "dialog:default"
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://accounts.google.com/*"
+        },
+        {
+          "url": "https://login.microsoftonline.com/*"
+        }
+      ]
+    },
+    "dialog:allow-open"
   ]
 }

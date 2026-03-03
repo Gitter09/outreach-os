@@ -9,6 +9,7 @@ import {
     CheckSquare,
     FileText,
     Settings,
+    Shield,
     PanelLeftClose,
     PanelLeft,
     ArrowLeft,
@@ -46,6 +47,7 @@ const settingsSubItems: NavItem[] = [
     { label: "Appearance", icon: Palette, path: "/settings/appearance" },
     { label: "Pipeline", icon: LayoutTemplate, path: "/settings/pipeline" },
     { label: "Data", icon: Database, path: "/settings/data" },
+    { label: "Security", icon: Shield, path: "/settings/security" },
 ];
 
 export function AppSidebar() {

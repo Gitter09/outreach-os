@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://gmail.googleapis.com https://graph.microsoft.com https://login.microsoftonline.com https://www.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
     }
   },
   "bundle": {

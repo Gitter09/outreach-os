@@ -1,5 +1,7 @@
-use anyhow::Result;
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use anyhow::{Context, Result};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use std::path::Path;
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub struct Db {
@@ -8,11 +10,30 @@ pub struct Db {
 
 impl Db {
     pub async fn new(db_path: &str) -> Result<Self> {
-        // ?mode=rwc creates the file if it doesn't exist
-        let pool = SqlitePoolOptions::new()
-            .max_connections(5)
-            .connect(&format!("sqlite:{}?mode=rwc", db_path))
-            .await?;
+        // Retrieve (or generate) the 256-bit DB encryption key from OS keychain
+        let hex_key = crate::crypto::get_or_create_db_key()
+            .context("Failed to obtain database encryption key from keychain")?;
+
+        // Try to open with encryption. If the file exists but isn't encrypted
+        // (legacy plaintext), SQLCipher returns an error — we handle that below.
+        let pool = try_open_encrypted(db_path, &hex_key).await;
+
+        let pool = match pool {
+            Ok(p) => p,
+            Err(_) => {
+                // If the DB file exists, it's a legacy plaintext database.
+                // Migrate it to an encrypted copy then reopen encrypted.
+                if Path::new(db_path).exists() {
+                    migrate_plaintext_to_encrypted(db_path, &hex_key)
+                        .await
+                        .context("Failed to migrate existing database to encrypted format")?;
+                }
+                // Now open (or create fresh) the encrypted database
+                try_open_encrypted(db_path, &hex_key)
+                    .await
+                    .context("Failed to open encrypted database after migration")?
+            }
+        };
 
         // Run migrations
         sqlx::migrate!("./migrations").run(&pool).await?;
@@ -23,6 +44,71 @@ impl Db {
     pub fn pool(&self) -> &SqlitePool {
         &self.pool
     }
+}
+
+/// Opens (or creates) a SQLCipher-encrypted database at `db_path` using `hex_key`.
+async fn try_open_encrypted(db_path: &str, hex_key: &str) -> Result<SqlitePool> {
+    // Build the connection URL. SQLCipher reads the key from the ?key= parameter
+    // when using the sqlx sqlcipher feature, applied as PRAGMA key before anything else.
+    let uri = format!("sqlite:{}?mode=rwc", db_path);
+
+    let connect_opts = SqliteConnectOptions::from_str(&uri)?
+        .pragma("key", format!("\"x'{}'\"", hex_key))
+        // SQLCipher 4 defaults — explicit for forward compatibility
+        .pragma("cipher_page_size", "4096")
+        .pragma("kdf_iter", "256000")
+        .pragma("cipher_hmac_algorithm", "HMAC_SHA512")
+        .pragma("cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512");
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(connect_opts)
+        .await?;
+
+    // Lightweight read to confirm the key is correct (will fail if wrong key)
+    sqlx::query("SELECT count(*) FROM sqlite_master")
+        .execute(&pool)
+        .await?;
+
+    Ok(pool)
+}
+
+/// Migrates a legacy plaintext SQLite database to an encrypted SQLCipher database.
+/// Uses SQLCipher's built-in `sqlcipher_export()` function to re-encrypt in-place.
+async fn migrate_plaintext_to_encrypted(db_path: &str, hex_key: &str) -> Result<()> {
+    let temp_path = format!("{}.encrypted_tmp", db_path);
+
+    // Open the existing plaintext database (no key)
+    let plain_uri = format!("sqlite:{}?mode=ro", db_path);
+    let plain_opts = SqliteConnectOptions::from_str(&plain_uri)?;
+    let plain_pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(plain_opts)
+        .await
+        .context("Failed to open existing plaintext database for migration")?;
+
+    // Attach a new encrypted database and export everything into it
+    let attach_sql = format!(
+        "ATTACH DATABASE '{}' AS encrypted KEY \"x'{}'\";",
+        temp_path, hex_key
+    );
+    sqlx::query(&attach_sql).execute(&plain_pool).await?;
+    sqlx::query("SELECT sqlcipher_export('encrypted')")
+        .execute(&plain_pool)
+        .await?;
+    sqlx::query("DETACH DATABASE encrypted")
+        .execute(&plain_pool)
+        .await?;
+
+    // Close the plaintext pool
+    plain_pool.close().await;
+
+    // Replace the plaintext file with the encrypted copy
+    std::fs::rename(&temp_path, db_path)
+        .context("Failed to replace plaintext database with encrypted version")?;
+
+    tracing::info!("Database successfully migrated to encrypted format");
+    Ok(())
 }
 
 pub mod models {

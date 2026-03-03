@@ -1,8 +1,8 @@
 pub mod ai;
+pub mod crypto;
 pub mod db;
 pub mod email_ai;
 pub mod email_service;
-pub mod enrichment;
 pub mod gmail;
 pub mod import;
 pub mod outlook;
@@ -14,7 +14,6 @@ pub use db::models;
 pub use db::Db;
 pub use email_ai::EmailAI;
 pub use email_service::{EmailService, SyncResult};
-pub use enrichment::EnrichmentEngine;
 
 pub async fn init_core(db_path: &str) -> anyhow::Result<Db> {
     Db::new(db_path).await

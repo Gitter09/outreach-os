@@ -5,10 +5,8 @@ use oauth2::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
-use std::path::PathBuf;
 
 const MS_AUTH_URL: &str = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
 const MS_TOKEN_URL: &str = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
@@ -19,18 +17,6 @@ const MS_SCOPES: &[&str] = &[
     "https://graph.microsoft.com/Mail.Send",
     "https://graph.microsoft.com/Mail.Read",
 ];
-const REDIRECT_PORT: u16 = 8420;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct MsCredentials {
-    installed: InstalledCredentials,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct InstalledCredentials {
-    client_id: String,
-    client_secret: String,
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OAuthTokenResponse {
@@ -48,7 +34,6 @@ struct FullTokenResponse {
 
 pub struct OutlookClient {
     http_client: Client,
-    credentials_path: PathBuf,
 }
 
 impl Default for OutlookClient {
@@ -59,36 +44,25 @@ impl Default for OutlookClient {
 
 impl OutlookClient {
     pub fn new() -> Self {
-        let credentials_path = dirs::home_dir()
-            .unwrap_or_default()
-            .join(".outreachos")
-            .join("ms_credentials.json");
-
         Self {
             http_client: Client::new(),
-            credentials_path,
         }
     }
 
     fn load_credentials(&self) -> Result<(String, String)> {
-        let content = fs::read_to_string(&self.credentials_path).map_err(|_| {
-            anyhow!(
-                "ms_credentials.json not found at {:?}. Please follow the setup guide.",
-                self.credentials_path
-            )
-        })?;
+        let client_id = crate::crypto::get_credential("outlook", "client_id")
+            .map_err(|_| anyhow!("Outlook credentials not configured. Please add your Microsoft OAuth credentials in Settings."))?;
+        let client_secret = crate::crypto::get_credential("outlook", "client_secret")
+            .map_err(|_| anyhow!("Outlook credentials not configured. Please add your Microsoft OAuth credentials in Settings."))?;
 
-        let creds: MsCredentials = serde_json::from_str(&content)
-            .map_err(|_| anyhow!("Invalid ms_credentials.json format"))?;
-
-        Ok((creds.installed.client_id, creds.installed.client_secret))
+        Ok((client_id, client_secret))
     }
 
-    /// Starts the OAuth flow.
-    pub fn get_auth_url(&self) -> Result<(String, PkceCodeVerifier)> {
+    /// Starts the OAuth flow. Returns (auth_url, pkce_verifier, csrf_token).
+    pub fn get_auth_url(&self, port: u16) -> Result<(String, PkceCodeVerifier, CsrfToken)> {
         let (client_id, client_secret) = self.load_credentials()?;
 
-        let redirect_url = format!("http://localhost:{}", REDIRECT_PORT);
+        let redirect_url = format!("http://localhost:{}", port);
 
         let client = BasicClient::new(ClientId::new(client_id))
             .set_client_secret(ClientSecret::new(client_secret))
@@ -106,22 +80,34 @@ impl OutlookClient {
             auth_req = auth_req.add_scope(Scope::new(scope.to_string()));
         }
 
-        let (auth_url, _csrf_token) = auth_req.url();
+        let (auth_url, csrf_token) = auth_req.url();
 
-        Ok((auth_url.to_string(), pkce_verifier))
+        Ok((auth_url.to_string(), pkce_verifier, csrf_token))
     }
 
-    /// Waits for the OAuth callback
-    pub fn wait_for_callback(&self) -> Result<String> {
-        let listener = TcpListener::bind(format!("127.0.0.1:{}", REDIRECT_PORT))?;
-        println!("Waiting for Outlook callback on port {}...", REDIRECT_PORT);
+    /// Waits for the OAuth callback on a pre-bound listener.
+    /// Validates the CSRF `state` parameter against the expected token.
+    pub fn wait_for_callback(
+        &self,
+        listener: TcpListener,
+        expected_csrf: &CsrfToken,
+    ) -> Result<String> {
+        println!("Waiting for Outlook callback...");
 
         for mut stream in listener.incoming().flatten() {
             let mut reader = BufReader::new(&stream);
             let mut request_line = String::new();
             reader.read_line(&mut request_line)?;
 
-            if let Some(code) = extract_code_from_request(&request_line) {
+            if let Some((code, state)) = extract_code_and_state_from_request(&request_line) {
+                if state != *expected_csrf.secret() {
+                    let response = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\n\r\n\
+                        <html><body><h1>✗ CSRF validation failed</h1>\
+                        <p>The OAuth callback state does not match. Please try again.</p></body></html>";
+                    stream.write_all(response.as_bytes())?;
+                    return Err(anyhow!("OAuth CSRF token mismatch — possible attack"));
+                }
+
                 let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\
                         <html><body><h1>✓ Outlook Connected!</h1>\
                         <p>You can close this window and return to OutreachOS.</p></body></html>";
@@ -137,9 +123,10 @@ impl OutlookClient {
         &self,
         code: String,
         pkce_verifier: PkceCodeVerifier,
+        port: u16,
     ) -> Result<OAuthTokenResponse> {
         let (client_id, client_secret) = self.load_credentials()?;
-        let redirect_url = format!("http://localhost:{}", REDIRECT_PORT);
+        let redirect_url = format!("http://localhost:{}", port);
 
         let params = [
             ("client_id", client_id.as_str()),
@@ -418,14 +405,22 @@ pub struct OutlookMessage {
     pub sent_at: chrono::DateTime<chrono::Utc>,
 }
 
-fn extract_code_from_request(request_line: &str) -> Option<String> {
+fn extract_code_and_state_from_request(request_line: &str) -> Option<(String, String)> {
     let url_part = request_line.split_whitespace().nth(1)?;
     let url = url::Url::parse(&format!("http://localhost{}", url_part)).ok()?;
 
+    let mut code = None;
+    let mut state = None;
     for (key, value) in url.query_pairs() {
         if key == "code" {
-            return Some(value.to_string());
+            code = Some(value.to_string());
+        }
+        if key == "state" {
+            state = Some(value.to_string());
         }
     }
-    None
+    match (code, state) {
+        (Some(c), Some(s)) => Some((c, s)),
+        _ => None,
+    }
 }

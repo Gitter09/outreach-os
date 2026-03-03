@@ -348,7 +348,11 @@ pub fn run() {
             sync_email_account,
             reset_email_sync_state,
             poll_email_tracking,
-            get_email_tracking
+            get_email_tracking,
+            set_lock_pin,
+            verify_lock_pin,
+            has_lock_pin,
+            remove_lock_pin
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -442,26 +446,37 @@ async fn get_email_accounts(
 
 #[tauri::command]
 async fn gmail_connect(db: tauri::State<'_, Db>) -> Result<String, AppError> {
+    use std::net::TcpListener;
     use std::thread;
 
     let client = outreach_core::gmail::GmailClient::new();
 
-    // Get auth URL and PKCE verifier
-    let (auth_url, pkce_verifier) = client.get_auth_url().map_err(|e| e.to_string())?;
+    // Bind to ephemeral port FIRST to prevent port hijacking
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .map_err(|e| format!("Failed to bind OAuth listener: {}", e))?;
+    let port = listener
+        .local_addr()
+        .map_err(|e| format!("Failed to get listener port: {}", e))?
+        .port();
+
+    // Get auth URL using the actual bound port
+    let (auth_url, pkce_verifier, csrf_token) =
+        client.get_auth_url(port).map_err(|e| e.to_string())?;
 
     // Open browser
     open::that(&auth_url).map_err(|e| format!("Failed to open browser: {}", e))?;
 
-    // Wait for callback
-    let code = thread::spawn(move || client.wait_for_callback())
+    // Wait for callback on the already-bound listener, validating CSRF state
+    let csrf_for_thread = csrf_token.clone();
+    let code = thread::spawn(move || client.wait_for_callback(listener, &csrf_for_thread))
         .join()
         .map_err(|_| "OAuth callback thread panicked".to_string())?
         .map_err(|e| e.to_string())?;
 
-    // Exchange code
+    // Exchange code (must use the same port for redirect_uri)
     let client = outreach_core::gmail::GmailClient::new();
     let tokens = client
-        .exchange_code(code, pkce_verifier)
+        .exchange_code(code, pkce_verifier, port)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -489,22 +504,33 @@ async fn gmail_connect(db: tauri::State<'_, Db>) -> Result<String, AppError> {
 
 #[tauri::command]
 async fn outlook_connect(db: tauri::State<'_, Db>) -> Result<String, AppError> {
+    use std::net::TcpListener;
     use std::thread;
 
     let client = outreach_core::outlook::OutlookClient::new();
 
-    let (auth_url, pkce_verifier) = client.get_auth_url().map_err(|e| e.to_string())?;
+    // Bind to ephemeral port FIRST to prevent port hijacking
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .map_err(|e| format!("Failed to bind OAuth listener: {}", e))?;
+    let port = listener
+        .local_addr()
+        .map_err(|e| format!("Failed to get listener port: {}", e))?
+        .port();
+
+    let (auth_url, pkce_verifier, csrf_token) =
+        client.get_auth_url(port).map_err(|e| e.to_string())?;
 
     open::that(&auth_url).map_err(|e| format!("Failed to open browser: {}", e))?;
 
-    let code = thread::spawn(move || client.wait_for_callback())
+    let csrf_for_thread = csrf_token.clone();
+    let code = thread::spawn(move || client.wait_for_callback(listener, &csrf_for_thread))
         .join()
         .map_err(|_| "OAuth callback thread panicked".to_string())?
         .map_err(|e| e.to_string())?;
 
     let client = outreach_core::outlook::OutlookClient::new();
     let tokens = client
-        .exchange_code(code, pkce_verifier)
+        .exchange_code(code, pkce_verifier, port)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -751,6 +777,13 @@ async fn save_setting(
     key: String,
     value: String,
 ) -> Result<(), AppError> {
+    // Intercept sensitive keys and store them in OS keychain
+    if key == "tracking_secret" {
+        outreach_core::crypto::store_secret("tracking_secret", &value)
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        return Ok(());
+    }
+
     let manager = outreach_core::settings::SettingsManager::new(db.pool().clone());
     manager
         .set(&key, &value)
@@ -762,6 +795,21 @@ async fn save_setting(
 
 #[tauri::command]
 fn get_import_headers(file_path: String) -> Result<outreach_core::import::ImportPreview, AppError> {
+    // HIGH-4: Validate file path to prevent path traversal
+    if file_path.contains("..") {
+        return Err(AppError::Validation(
+            "Invalid file path: path traversal not allowed".into(),
+        ));
+    }
+    let path = std::path::Path::new(&file_path);
+    match path.extension().and_then(|ext| ext.to_str()) {
+        Some("csv") | Some("xlsx") | Some("xls") => {}
+        _ => {
+            return Err(AppError::Validation(
+                "Only .csv and .xlsx files are supported".into(),
+            ))
+        }
+    }
     outreach_core::import::preview_file(&file_path).map_err(|e| e.to_string().into())
 }
 
@@ -1125,16 +1173,9 @@ struct EmailCredentialStatus {
 
 #[tauri::command]
 async fn check_email_credentials() -> Result<EmailCredentialStatus, AppError> {
-    let home = dirs::home_dir()
-        .ok_or_else(|| AppError::Internal("Could not determine home directory".into()))?;
-    let config_dir = home.join(".outreachos");
-
-    let gmail_path = config_dir.join("credentials.json");
-    let outlook_path = config_dir.join("ms_credentials.json");
-
     Ok(EmailCredentialStatus {
-        gmail_configured: gmail_path.exists(),
-        outlook_configured: outlook_path.exists(),
+        gmail_configured: outreach_core::crypto::has_credentials("gmail"),
+        outlook_configured: outreach_core::crypto::has_credentials("outlook"),
     })
 }
 
@@ -1144,50 +1185,66 @@ async fn save_email_credentials(
     client_id: String,
     client_secret: String,
 ) -> Result<(), AppError> {
-    use std::fs;
-    use std::io::Write;
+    outreach_core::crypto::store_credential(&provider, "client_id", &client_id)
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    outreach_core::crypto::store_credential(&provider, "client_secret", &client_secret)
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(())
+}
 
-    let home = dirs::home_dir()
-        .ok_or_else(|| AppError::Internal("Could not determine home directory".into()))?;
-    let config_dir = home.join(".outreachos");
+// ===== App Lock Screen Commands =====
 
-    // Create directory if it doesn't exist
-    fs::create_dir_all(&config_dir)?;
+#[tauri::command]
+async fn set_lock_pin(db: tauri::State<'_, Db>, pin: String) -> Result<(), AppError> {
+    use outreach_core::settings::SettingsManager;
 
-    let (file_path, json_content) = match provider.as_str() {
-        "gmail" => {
-            let path = config_dir.join("credentials.json");
-            let content = serde_json::json!({
-                "installed": {
-                    "client_id": client_id,
-                    "client_secret": client_secret
-                }
-            });
-            (path, content)
-        }
-        "outlook" => {
-            let path = config_dir.join("ms_credentials.json");
-            let content = serde_json::json!({
-                "installed": {
-                    "client_id": client_id,
-                    "client_secret": client_secret
-                }
-            });
-            (path, content)
-        }
-        _ => {
-            return Err(AppError::Validation(format!(
-                "Unknown provider: {}",
-                provider
-            )))
-        }
-    };
+    let manager = SettingsManager::new(db.pool().clone());
+    let stored = outreach_core::crypto::create_pin_data(&pin);
 
-    let json_str = serde_json::to_string_pretty(&json_content)?;
+    manager
+        .set("app_lock_pin_hash", &stored)
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    let mut file = fs::File::create(&file_path)?;
+    Ok(())
+}
 
-    file.write_all(json_str.as_bytes())?;
+#[tauri::command]
+async fn verify_lock_pin(db: tauri::State<'_, Db>, pin: String) -> Result<bool, AppError> {
+    use outreach_core::settings::SettingsManager;
 
+    let manager = SettingsManager::new(db.pool().clone());
+    let stored = manager
+        .get("app_lock_pin_hash")
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    match stored {
+        Some(hash) => Ok(outreach_core::crypto::verify_pin_against_hash(&pin, &hash)),
+        None => Err(AppError::Internal("No PIN configured".to_string())),
+    }
+}
+
+#[tauri::command]
+async fn has_lock_pin(db: tauri::State<'_, Db>) -> Result<bool, AppError> {
+    use outreach_core::settings::SettingsManager;
+
+    let manager = SettingsManager::new(db.pool().clone());
+    let stored = manager
+        .get("app_lock_pin_hash")
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    Ok(stored.is_some())
+}
+
+#[tauri::command]
+async fn remove_lock_pin(db: tauri::State<'_, Db>) -> Result<(), AppError> {
+    // Delete from DB
+    let pool = db.pool();
+    sqlx::query("DELETE FROM settings WHERE key = 'app_lock_pin_hash'")
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
     Ok(())
 }

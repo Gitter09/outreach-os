@@ -45,6 +45,13 @@ impl EmailService {
         let pool = self.db.pool();
         let expires_at = expires_in.map(|s| Utc::now().timestamp() + s);
 
+        // Encrypt tokens before storage
+        let encrypted_access = crate::crypto::encrypt(access_token)?;
+        let encrypted_refresh = match refresh_token {
+            Some(rt) => Some(crate::crypto::encrypt(rt)?),
+            None => None,
+        };
+
         // Check if account exists
         let existing =
             sqlx::query("SELECT id FROM email_accounts WHERE email = ? AND provider = ?")
@@ -57,14 +64,14 @@ impl EmailService {
             let id: String = row.get("id");
             // Update
             let mut query = "UPDATE email_accounts SET access_token = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP".to_string();
-            if refresh_token.is_some() {
+            if encrypted_refresh.is_some() {
                 query.push_str(", refresh_token = ?");
             }
             query.push_str(" WHERE id = ?");
 
-            let mut q = sqlx::query(&query).bind(access_token).bind(expires_at);
+            let mut q = sqlx::query(&query).bind(&encrypted_access).bind(expires_at);
 
-            if let Some(rt) = refresh_token {
+            if let Some(ref rt) = encrypted_refresh {
                 q = q.bind(rt);
             }
 
@@ -78,8 +85,8 @@ impl EmailService {
             .bind(id)
             .bind(provider)
             .bind(email)
-            .bind(access_token)
-            .bind(refresh_token)
+            .bind(&encrypted_access)
+            .bind(&encrypted_refresh)
             .bind(expires_at)
             .execute(pool)
             .await?;
@@ -97,6 +104,12 @@ impl EmailService {
                 .fetch_optional(pool)
                 .await?
                 .ok_or_else(|| anyhow!("Account not found"))?;
+
+        // Decrypt tokens (backward-compatible with legacy plaintext)
+        account.access_token = crate::crypto::decrypt_or_passthrough(&account.access_token);
+        if let Some(ref rt) = account.refresh_token {
+            account.refresh_token = Some(crate::crypto::decrypt_or_passthrough(rt));
+        }
 
         // Check expiration (buffer 60s)
         if let Some(expires_at) = account.expires_at {
@@ -117,18 +130,25 @@ impl EmailService {
 
                     let new_expires_at = new_tokens.2.map(|s| Utc::now().timestamp() + s);
 
-                    // Update DB
+                    // Encrypt new tokens before storing
+                    let encrypted_access = crate::crypto::encrypt(&new_tokens.0)?;
+                    let encrypted_refresh = match &new_tokens.1 {
+                        Some(rt) => Some(crate::crypto::encrypt(rt)?),
+                        None => None,
+                    };
+
+                    // Update DB with encrypted tokens
                     sqlx::query(
                         "UPDATE email_accounts SET access_token = ?, refresh_token = COALESCE(?, refresh_token), expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
                     )
-                    .bind(&new_tokens.0)
-                    .bind(&new_tokens.1)
+                    .bind(&encrypted_access)
+                    .bind(&encrypted_refresh)
                     .bind(new_expires_at)
                     .bind(&account.id)
                     .execute(pool)
                     .await?;
 
-                    // Update in-memory struct
+                    // Update in-memory struct with plaintext (for immediate use)
                     account.access_token = new_tokens.0;
                     if let Some(rt) = new_tokens.1 {
                         account.refresh_token = Some(rt);
