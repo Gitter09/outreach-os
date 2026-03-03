@@ -18,9 +18,6 @@ jobs:
         platform: [macos-latest, ubuntu-22.04, windows-latest]
 
     runs-on: ${{ matrix.platform }}
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
     steps:
       - uses: actions/checkout@v4
 
@@ -37,8 +34,6 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
