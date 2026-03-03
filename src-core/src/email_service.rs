@@ -444,7 +444,9 @@ impl EmailService {
 
             let mut tracking_id: Option<String> = None;
             let combined_body = format!("{}\n{}", body, html_body.as_deref().unwrap_or(""));
-            if let Ok(re) = regex::Regex::new(r#"/track/open/([a-f0-9\-]{36})\.png"#) {
+            if let Ok(re) =
+                regex::Regex::new(r#"(?:/|%2F)track(?:/|%2F)open(?:/|%2F)([a-f0-9\-]{36})\.png"#)
+            {
                 if let Some(caps) = re.captures(&combined_body) {
                     tracking_id = Some(caps[1].to_string());
                 }

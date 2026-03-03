@@ -3,24 +3,7 @@ use tauri::Manager;
 // use std::fs; removed
 
 /// Extracts first and last name from page title or LinkedIn URL slug
-fn extract_names_from_title_or_url(title: &str, url: &str) -> (String, String) {
-    // Try to extract from title first (works when not blocked)
-    let clean_title = title.split('|').next().unwrap_or("").trim();
-    if !clean_title.is_empty()
-        && !clean_title.contains("LinkedIn")
-        && clean_title != "Unknown Profile"
-    {
-        let names: Vec<&str> = clean_title.split_whitespace().collect();
-        if names.len() >= 2 {
-            return (names[0].to_string(), names[1..].join(" "));
-        }
-    }
-
-    // Fallback: URL slug parsing REMOVED as per user request to avoid "Harshit Singh Finance" issues.
-    // relying on AI or Title only.
-
-    ("Unknown".to_string(), "Contact".to_string())
-}
+// extract_names_from_title_or_url function removed as it's never used
 
 fn extract_linkedin_slug(url: &str) -> Option<&str> {
     // Match /in/username or /pub/username patterns
@@ -31,13 +14,7 @@ fn extract_linkedin_slug(url: &str) -> Option<&str> {
         .map(|s| s.split('?').next().unwrap_or(s))
 }
 
-fn capitalize(s: &str) -> String {
-    let mut chars = s.chars();
-    match chars.next() {
-        None => String::new(),
-        Some(first) => first.to_uppercase().chain(chars).collect(),
-    }
-}
+// capitalise function removed as it's never used
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -511,7 +488,7 @@ async fn scrape_clipboard(db: tauri::State<'_, Db>) -> Result<String, String> {
     let url = engine.get_clipboard_url().map_err(|e| e.to_string())?;
 
     // 3. Fetch Page Data
-    let (title, raw_html, description) = engine
+    let (title, raw_html, _description) = engine
         .fetch_page_metadata(&url)
         .await
         .map_err(|e| e.to_string())?;
@@ -1332,10 +1309,7 @@ async fn save_setting(db: tauri::State<'_, Db>, key: String, value: String) -> R
 
 // ===== Import Commands =====
 
-#[tauri::command]
-fn import_preview(file_path: String) -> Result<outreach_core::import::ImportPreview, String> {
-    outreach_core::import::preview_file(&file_path).map_err(|e| e.to_string())
-}
+// import_preview function removed as it's never used
 
 #[derive(serde::Serialize)]
 struct ImportAnalysis {

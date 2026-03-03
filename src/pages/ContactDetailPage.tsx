@@ -128,14 +128,14 @@ export function ContactDetailPage() {
     return (
         <div className="min-h-screen bg-background border-l font-sans">
             {/* Back Navigation Bar */}
-            <div className="h-14 border-b flex items-center px-4 sticky top-0 bg-background/95 backdrop-blur z-10">
+            <div className="h-[60px] border-b flex items-center px-6 sticky top-0 bg-background/95 backdrop-blur z-10 shrink-0">
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => navigate(-1)}>
                     <ArrowLeft className="h-4 w-4" />
                     Back to Contacts
                 </Button>
             </div>
 
-            <div className="grid grid-cols-12 min-h-[calc(100vh-3.5rem)]">
+            <div className="grid grid-cols-12 min-h-[calc(100vh-60px)]">
                 {/* LEFT COLUMN: Profile & Context */}
                 <div className="col-span-12 md:col-span-4 lg:col-span-3 border-r bg-muted/10 p-6 flex flex-col gap-6">
 

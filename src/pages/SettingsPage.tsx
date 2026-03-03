@@ -1,18 +1,12 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-// Removed AISettingsTab import as we inline it due to shared state or missing file
-import { EmailSettingsTab } from "./email-settings-tab";
+import { useParams, useNavigate } from "react-router-dom";
+import { EmailSettingsTab } from "@/components/settings/email-settings-tab";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
-    Brain,
-    Palette,
-    LayoutTemplate,
-    Database,
     Key,
     Save,
     CheckCircle2,
@@ -21,22 +15,29 @@ import {
     Moon,
     Monitor,
     Trash2,
-    FileCode,
-    Mail
+    Brain,
+    Database,
 } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 
-interface SettingsDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-}
+type SettingsTab = "ai" | "email" | "appearance" | "prompts" | "pipeline" | "data";
 
-type Tab = "ai" | "email" | "appearance" | "pipeline" | "data" | "prompts";
+const tabTitles: Record<SettingsTab, string> = {
+    ai: "Intelligence",
+    email: "Email Integration",
+    appearance: "Appearance",
+    prompts: "AI Prompts",
+    pipeline: "Pipeline",
+    data: "Data",
+};
 
-export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const [activeTab, setActiveTab] = useState<Tab>("ai");
+export function SettingsPage() {
+    const { tab } = useParams<{ tab?: string }>();
+    const navigate = useNavigate();
+    const activeTab = (tab as SettingsTab) || "ai";
+
     const { settings, loading, updateSetting } = useSettings();
     const [apiKey, setApiKey] = useState("");
     const [savingKey, setSavingKey] = useState(false);
@@ -46,6 +47,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     const [aiProvider, setAiProvider] = useState("gemini");
     const [aiModel, setAiModel] = useState("");
     const [aiBaseUrl, setAiBaseUrl] = useState("");
+
+    // Redirect /settings to /settings/ai
+    useEffect(() => {
+        if (!tab) {
+            navigate("/settings/ai", { replace: true });
+        }
+    }, [tab, navigate]);
 
     // Sync from settings hook
     useEffect(() => {
@@ -60,15 +68,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         if (!apiKey) return;
         setSavingKey(true);
         try {
-            // Save to keyring
             let serviceName = "OPENROUTER_API_KEY";
             if (aiProvider === "gemini") serviceName = "GEMINI_API_KEY";
-            else if (aiProvider === "ollama") serviceName = "OLLAMA_API_KEY"; // usually not needed but consistent
+            else if (aiProvider === "ollama") serviceName = "OLLAMA_API_KEY";
 
             await invoke("save_api_key", { service: serviceName, key: apiKey });
             setKeySaved(true);
             setTimeout(() => setKeySaved(false), 2000);
-            setApiKey(""); // Clear input for security
+            setApiKey("");
         } catch (err) {
             console.error("Failed to save key:", err);
             alert("Failed to save API key");
@@ -80,48 +87,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     const handleSettingChange = (key: string, value: string) => {
         updateSetting(key, value);
     };
-
-    const renderSidebar = () => (
-        <div className="w-[200px] border-r h-full bg-muted/30 p-2 space-y-1">
-            <h2 className="px-4 py-2 text-sm font-semibold text-muted-foreground mb-2">Settings</h2>
-
-            {(["ai", "email", "appearance", "prompts", "pipeline", "data"] as Tab[]).map((tab) => {
-                const icons: Record<Tab, any> = {
-                    ai: Brain,
-                    email: Mail,
-                    appearance: Palette,
-                    prompts: FileCode,
-                    pipeline: LayoutTemplate,
-                    data: Database
-                };
-                const labels: Record<Tab, string> = {
-                    ai: "Intelligence",
-                    email: "Email Integration",
-                    appearance: "Appearance",
-                    prompts: "AI Prompts",
-                    pipeline: "Pipeline",
-                    data: "Data"
-                };
-                const Icon = icons[tab];
-
-                return (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={cn(
-                            "w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all border",
-                            activeTab === tab
-                                ? "bg-primary/10 text-primary border-primary/20"
-                                : "text-muted-foreground border-transparent hover:border-primary hover:text-primary hover:bg-transparent"
-                        )}
-                    >
-                        <Icon className="h-4 w-4" />
-                        {labels[tab]}
-                    </button>
-                );
-            })}
-        </div>
-    );
 
     const renderAiContent = () => (
         <div className="space-y-6">
@@ -222,7 +187,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     </div>
                 </div>
             </div>
-
         </div>
     );
 
@@ -341,10 +305,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         if (!confirm("Are you sure? This will delete all contacts, statuses, and tags. This action cannot be undone.")) {
             return;
         }
-
         try {
-            // We'll need a backend command for this too, or just execute a series of deletes.
-            // For now, let's assume we'll use a single command we're about to add.
             await invoke("clear_all_data");
             alert("Database cleared successfully. The app will now reload.");
             window.location.reload();
@@ -458,18 +419,18 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             case "prompts": return renderPromptsContent();
             case "pipeline": return <div className="p-4 text-muted-foreground">Pipeline configuration coming soon.</div>;
             case "data": return renderDataContent();
-            default: return null;
+            default: return renderAiContent();
         }
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[800px] h-[600px] p-0 flex gap-0 overflow-hidden">
-                {renderSidebar()}
-                <ScrollArea className="flex-1 p-6 h-full">
-                    {renderContent()}
-                </ScrollArea>
-            </DialogContent>
-        </Dialog>
+        <div className="flex flex-col h-full relative">
+            <header className="h-[60px] px-6 border-b flex items-center shrink-0">
+                <h1 className="text-lg font-semibold tracking-tight">{tabTitles[activeTab] || "Settings"}</h1>
+            </header>
+            <div className="flex-1 overflow-auto p-6 max-w-4xl w-full">
+                {renderContent()}
+            </div>
+        </div>
     );
 }

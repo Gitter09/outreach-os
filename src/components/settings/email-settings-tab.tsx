@@ -70,11 +70,11 @@ export function EmailSettingsTab() {
 
     async function fetchTrackingConfig() {
         try {
-            const baseUrlStr: string | null = await invoke("get_settings", { key: "tracking_base_url" });
-            if (baseUrlStr) setTrackingBaseUrl(baseUrlStr);
-
-            const secretStr: string | null = await invoke("get_settings", { key: "tracking_secret" });
-            if (secretStr) setTrackingSecret(secretStr);
+            const settings = await invoke<Record<string, string>>("get_settings");
+            if (settings) {
+                setTrackingBaseUrl(settings.tracking_base_url || "");
+                setTrackingSecret(settings.tracking_secret || "");
+            }
         } catch (e) {
             console.error("Failed to fetch tracking config:", e);
         }
@@ -457,10 +457,19 @@ export function EmailSettingsTab() {
                 </div>
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base">Portfolio Server Config</CardTitle>
-                        <CardDescription>
-                            Enter the base URL and shared secret for your tracking endpoints.
-                        </CardDescription>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="text-base">Portfolio Server Config</CardTitle>
+                                <CardDescription>
+                                    Enter the base URL and shared secret for your tracking endpoints.
+                                </CardDescription>
+                            </div>
+                            {trackingBaseUrl && trackingSecret && (
+                                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 shrink-0">
+                                    Configured ✓
+                                </Badge>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
@@ -470,6 +479,9 @@ export function EmailSettingsTab() {
                                 value={trackingBaseUrl}
                                 onChange={(e) => setTrackingBaseUrl(e.target.value)}
                             />
+                            {trackingBaseUrl && (
+                                <p className="text-xs text-muted-foreground">Currently set to: <span className="font-mono text-foreground">{trackingBaseUrl}</span></p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label>Shared Secret</Label>
@@ -479,6 +491,9 @@ export function EmailSettingsTab() {
                                 value={trackingSecret}
                                 onChange={(e) => setTrackingSecret(e.target.value)}
                             />
+                            {trackingSecret && (
+                                <p className="text-xs text-muted-foreground">Secret is saved ({trackingSecret.length} characters)</p>
+                            )}
                         </div>
                         <div className="flex gap-2 pt-2">
                             <Button
