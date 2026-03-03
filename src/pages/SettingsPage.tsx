@@ -15,6 +15,7 @@ import {
 import { useSettings } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
+import { PageHeader } from "@/components/layout/page-header";
 
 type SettingsTab = "email" | "appearance" | "pipeline" | "data";
 
@@ -243,9 +244,7 @@ export function SettingsPage() {
 
     return (
         <div className="flex flex-col h-full relative">
-            <header className="h-[60px] px-6 border-b flex items-center shrink-0">
-                <h1 className="text-lg font-semibold tracking-tight">{tabTitles[activeTab] || "Settings"}</h1>
-            </header>
+            <PageHeader title={tabTitles[activeTab] || "Settings"} />
             <div className="flex-1 overflow-auto p-6 max-w-4xl w-full">
                 {renderContent()}
             </div>

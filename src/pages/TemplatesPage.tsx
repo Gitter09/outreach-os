@@ -1,12 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
+import { useOutletContext } from "react-router-dom";
 
 export function TemplatesPage() {
+    const { setCommandOpen } = useOutletContext<{ setCommandOpen: (open: boolean) => void }>();
+
     return (
         <div className="flex flex-col h-full relative">
-            <header className="h-[60px] px-6 border-b flex items-center shrink-0">
-                <h1 className="text-lg font-semibold tracking-tight">Templates</h1>
-            </header>
+            <PageHeader title="Templates" onSearchClick={() => setCommandOpen(true)} />
 
             <div className="flex-1 overflow-auto p-6 space-y-6">
                 <div>

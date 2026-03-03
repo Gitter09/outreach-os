@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { Contact } from "@/types/crm";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/layout/page-header";
 
 export function ContactDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -54,6 +55,7 @@ export function ContactDetailPage() {
     const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
     const [isSummaryEditOpen, setIsSummaryEditOpen] = useState(false);
     const [summaryDraft, setSummaryDraft] = useState("");
+    const { setCommandOpen } = useOutletContext<{ setCommandOpen: (open: boolean) => void }>();
     // const { statuses } = useStatuses(); // Not used for progress bar anymore
 
     const { tags: availableTags, assignTag, unassignTag } = useTags();
@@ -130,14 +132,16 @@ export function ContactDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background border-l font-sans">
-            {/* Back Navigation Bar */}
-            <div className="h-[60px] border-b flex items-center px-6 sticky top-0 bg-background/95 backdrop-blur z-10 shrink-0">
-                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => navigate(-1)}>
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Contacts
-                </Button>
-            </div>
+        <div className="min-h-screen bg-background border-l font-sans flex flex-col">
+            <PageHeader
+                onSearchClick={() => setCommandOpen(true)}
+                leftActions={
+                    <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => navigate("/contacts")}>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Contacts
+                    </Button>
+                }
+            />
 
             <div className="grid grid-cols-12 min-h-[calc(100vh-60px)]">
                 {/* LEFT COLUMN: Profile & Context */}

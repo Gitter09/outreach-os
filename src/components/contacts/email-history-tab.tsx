@@ -46,7 +46,7 @@ function EmailMessageItem({ email, contact }: { email: EmailMessage, contact: Co
             <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isOutbound ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
                 {isOutbound ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />}
             </div>
-            <div className="flex-1 space-y-1 border rounded-lg p-3 bg-card hover:bg-accent/5 transition-colors">
+            <div className="flex-1 space-y-2 border rounded-lg p-4 bg-card hover:bg-accent/5 transition-colors shadow-sm">
                 <div className="flex justify-between items-start">
                     <h4 className="text-sm font-semibold">{email.subject || "(No Subject)"}</h4>
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center">
@@ -72,9 +72,9 @@ function EmailMessageItem({ email, contact }: { email: EmailMessage, contact: Co
                         )}
                     </div>
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-2 font-mono bg-muted/30 p-2 rounded">
+                <div className="text-xs text-muted-foreground mt-3 font-mono bg-muted/30 p-3 rounded-md border border-muted/20 leading-relaxed max-h-[120px] overflow-hidden">
                     {email.body || "(No Body Content)"}
-                </p>
+                </div>
             </div>
         </div>
     );
@@ -118,8 +118,8 @@ export function EmailHistoryTab({ contact }: EmailHistoryTabProps) {
     }
 
     return (
-        <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
+        <ScrollArea className="h-[400px]">
+            <div className="space-y-4 p-6">
                 {emails.map((email) => (
                     <EmailMessageItem key={email.id} email={email} contact={contact} />
                 ))}

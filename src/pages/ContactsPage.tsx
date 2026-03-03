@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { Contact } from "@/types/crm";
 import { Button } from "@/components/ui/button";
@@ -35,11 +35,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CommandPalette } from "@/components/layout/command-palette";
-import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
-import { ImportDialog } from "@/components/import/import-dialog";
+import { PageHeader } from "@/components/layout/page-header";
 import { AddContactDropdown } from "@/components/contacts/add-contact-dropdown";
-import { TopCommandBar } from "@/components/layout/top-command-bar";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { useStatuses } from "@/hooks/use-statuses";
 import { getColorHex } from "@/lib/utils";
@@ -54,31 +51,28 @@ export function ContactsPage() {
     const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
     const [loading, setLoading] = useState(true);
 
-    // Add Contact Dialog State
-    const [addContactOpen, setAddContactOpen] = useState(false);
-    const [addQuickStatusId, setAddQuickStatusId] = useState<string | null>(null);
+    const { setCommandOpen, setAddContactOpen, setImportOpen, refreshTrigger } = useOutletContext<{
+        setCommandOpen: (open: boolean) => void;
+        setAddContactOpen: (open: boolean) => void;
+        setImportOpen: (open: boolean) => void;
+        refreshTrigger: number;
+    }>();
 
-    const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [tagFilter, setTagFilter] = useState<string>("all");
-    const [commandOpen, setCommandOpen] = useState(false);
     const [manageTagsOpen, setManageTagsOpen] = useState(false);
     const { tags: availableTags } = useTags();
 
+    // Re-fetch when global actions complete
     useEffect(() => {
-        const down = (e: KeyboardEvent) => {
-            if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                setCommandOpen((open) => !open);
-            }
-        };
-        document.addEventListener("keydown", down);
-        return () => document.removeEventListener("keydown", down);
-    }, []);
+        if (refreshTrigger > 0) {
+            fetchContacts();
+        }
+    }, [refreshTrigger]);
 
     const [sortBy, setSortBy] = useState("added_desc");
 
@@ -180,8 +174,7 @@ export function ContactsPage() {
         }
     };
 
-    const handleOpenAddContact = (statusId?: string) => {
-        setAddQuickStatusId(statusId || null);
+    const handleOpenAddContact = () => {
         setAddContactOpen(true);
     };
 
@@ -216,45 +209,19 @@ export function ContactsPage() {
 
     return (
         <div className="flex flex-col h-full relative">
-            <CommandPalette
-                open={commandOpen}
-                onOpenChange={setCommandOpen}
-                onContactsChanged={fetchContacts}
-                onOpenImport={() => setImportDialogOpen(true)}
-                onOpenAddContact={() => handleOpenAddContact()}
-                onSelectContact={(id) => {
-                    const contact = contacts.find((c) => c.id === id);
-                    if (contact) {
-                        handleContactClick(contact);
-                    }
-                }}
-                onOpenSettings={() => navigate("/settings")}
-            />
-            <ImportDialog
-                open={importDialogOpen}
-                onOpenChange={setImportDialogOpen}
-                onImportComplete={() => {
-                    fetchContacts();
-                }}
-            />
-
-            {/* Page Header */}
-            <header className="h-[60px] px-6 border-b flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-lg font-semibold tracking-tight">Contacts</h1>
-                </div>
-                <div className="flex items-center gap-3">
-                    <TopCommandBar onClick={() => setCommandOpen(true)} className="w-64" />
-                    <Button variant="outline" size="sm" onClick={fetchContacts}>
-                        <RefreshCcw className="mr-2 h-4 w-4" />
-                        Refresh
-                    </Button>
-                    <AddContactDropdown
-                        onAddManually={() => handleOpenAddContact()}
-                        onImportFile={() => setImportDialogOpen(true)}
-                    />
-                </div>
-            </header>
+            <PageHeader
+                title="Contacts"
+                onSearchClick={() => setCommandOpen(true)}
+            >
+                <Button variant="outline" size="sm" onClick={fetchContacts}>
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    Refresh
+                </Button>
+                <AddContactDropdown
+                    onAddManually={() => setAddContactOpen(true)}
+                    onImportFile={() => setImportOpen(true)}
+                />
+            </PageHeader>
 
             <div className="flex-1 overflow-auto p-6 space-y-6">
                 <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
@@ -536,13 +503,6 @@ export function ContactsPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Dialogs */}
-            <AddContactDialog
-                open={addContactOpen}
-                onOpenChange={setAddContactOpen}
-                onContactAdded={fetchContacts}
-                initialStatusId={addQuickStatusId || undefined}
-            />
             <ManageTagsDialog open={manageTagsOpen} onOpenChange={setManageTagsOpen} />
         </div>
     );
