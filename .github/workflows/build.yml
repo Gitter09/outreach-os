@@ -64,6 +64,13 @@ jobs:
           includeRelease: false
 
 
+      - name: "[Debug] List bundle output"
+        shell: bash
+        run: |
+          echo "=== Contents of src-tauri/target/release/bundle ==="
+          ls -la src-tauri/target/release/bundle/ || echo "Bundle directory does not exist!"
+          find src-tauri/target/release/bundle/ -type f 2>/dev/null || echo "No files found in bundle dir"
+
       - name: Upload Artifacts (macOS)
         if: matrix.platform == 'macos-latest'
         uses: actions/upload-artifact@v4
