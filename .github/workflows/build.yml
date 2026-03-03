@@ -60,9 +60,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          # Don't create release on every push
-          tagName: false
 
   test:
     runs-on: ubuntu-latest
