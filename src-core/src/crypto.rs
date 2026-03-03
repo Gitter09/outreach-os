@@ -70,14 +70,11 @@ fn get_or_create_key() -> Result<[u8; 32]> {
     }
 }
 
-/// Encrypts a plaintext string using AES-256-GCM.
-/// Returns a base64-encoded string containing `nonce || ciphertext`.
-pub fn encrypt(plaintext: &str) -> Result<String> {
-    let key_bytes = get_or_create_key()?;
-    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
+/// Encrypts with an explicit 32-byte key (used internally and in tests).
+fn encrypt_with_key(plaintext: &str, key_bytes: &[u8; 32]) -> Result<String> {
+    let cipher = Aes256Gcm::new_from_slice(key_bytes)
         .map_err(|e| anyhow!("Failed to create cipher: {}", e))?;
 
-    // Generate a random 12-byte nonce
     let mut nonce_bytes = [0u8; NONCE_SIZE];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
@@ -86,7 +83,6 @@ pub fn encrypt(plaintext: &str) -> Result<String> {
         .encrypt(nonce, plaintext.as_bytes())
         .map_err(|e| anyhow!("Encryption failed: {}", e))?;
 
-    // Concatenate nonce + ciphertext, then base64 encode
     let mut combined = Vec::with_capacity(NONCE_SIZE + ciphertext.len());
     combined.extend_from_slice(&nonce_bytes);
     combined.extend_from_slice(&ciphertext);
@@ -94,11 +90,9 @@ pub fn encrypt(plaintext: &str) -> Result<String> {
     Ok(BASE64_STANDARD.encode(combined))
 }
 
-/// Decrypts a base64-encoded `nonce || ciphertext` string.
-/// Returns the original plaintext.
-pub fn decrypt(encrypted: &str) -> Result<String> {
-    let key_bytes = get_or_create_key()?;
-    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
+/// Decrypts with an explicit 32-byte key (used internally and in tests).
+fn decrypt_with_key(encrypted: &str, key_bytes: &[u8; 32]) -> Result<String> {
+    let cipher = Aes256Gcm::new_from_slice(key_bytes)
         .map_err(|e| anyhow!("Failed to create cipher: {}", e))?;
 
     let combined = BASE64_STANDARD
@@ -121,6 +115,20 @@ pub fn decrypt(encrypted: &str) -> Result<String> {
         .map_err(|e| anyhow!("Decryption failed: {}", e))?;
 
     String::from_utf8(plaintext).context("Decrypted data is not valid UTF-8")
+}
+
+/// Encrypts a plaintext string using AES-256-GCM.
+/// Returns a base64-encoded string containing `nonce || ciphertext`.
+pub fn encrypt(plaintext: &str) -> Result<String> {
+    let key_bytes = get_or_create_key()?;
+    encrypt_with_key(plaintext, &key_bytes)
+}
+
+/// Decrypts a base64-encoded `nonce || ciphertext` string.
+/// Returns the original plaintext.
+pub fn decrypt(encrypted: &str) -> Result<String> {
+    let key_bytes = get_or_create_key()?;
+    decrypt_with_key(encrypted, &key_bytes)
 }
 
 /// Attempts to decrypt a value, but if it fails (e.g., the value was stored
@@ -239,14 +247,12 @@ mod tests {
 
     #[test]
     fn test_encrypt_decrypt_roundtrip() {
+        // Use a fixed test key to avoid depending on the OS keyring
+        let test_key = [42u8; 32];
         let original = "test_token_12345";
-        let encrypted = encrypt(original).expect("encryption failed");
-
-        // Encrypted should not equal original
+        let encrypted = encrypt_with_key(original, &test_key).expect("encryption failed");
         assert_ne!(encrypted, original);
-
-        // Decryption should return original
-        let decrypted = decrypt(&encrypted).expect("decryption failed");
+        let decrypted = decrypt_with_key(&encrypted, &test_key).expect("decryption failed");
         assert_eq!(decrypted, original);
     }
 
@@ -254,20 +260,21 @@ mod tests {
     fn test_decrypt_or_passthrough_with_plaintext() {
         let legacy_token = "ya29.a0AVvZVsoQFtest_plaintext_token";
         let result = decrypt_or_passthrough(legacy_token);
-        // Should return the original since it's not encrypted
         assert_eq!(result, legacy_token);
     }
 
     #[test]
     fn test_different_encryptions_produce_different_ciphertext() {
+        // Use a fixed test key to avoid depending on the OS keyring
+        let test_key = [42u8; 32];
         let original = "test_token";
-        let enc1 = encrypt(original).expect("encryption failed");
-        let enc2 = encrypt(original).expect("encryption failed");
+        let enc1 = encrypt_with_key(original, &test_key).expect("encryption failed");
+        let enc2 = encrypt_with_key(original, &test_key).expect("encryption failed");
         // Different nonces → different ciphertext
         assert_ne!(enc1, enc2);
         // Both decrypt to the same value
-        assert_eq!(decrypt(&enc1).unwrap(), original);
-        assert_eq!(decrypt(&enc2).unwrap(), original);
+        assert_eq!(decrypt_with_key(&enc1, &test_key).unwrap(), original);
+        assert_eq!(decrypt_with_key(&enc2, &test_key).unwrap(), original);
     }
 
     #[test]
