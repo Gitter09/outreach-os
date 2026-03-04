@@ -1,5 +1,4 @@
--- Email CRM Phase 1: Core Connectivity & Tracking
-
+-- Email CRM Phase 1: Core Connectivity
 -- Stores multiple email accounts (Gmail, Outlook)
 CREATE TABLE IF NOT EXISTS email_accounts (
     id TEXT PRIMARY KEY,
@@ -53,18 +52,6 @@ CREATE TABLE IF NOT EXISTS scheduled_emails (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
     FOREIGN KEY (account_id) REFERENCES email_accounts(id) ON DELETE CASCADE
-);
-
--- Email tracking events (opens, clicks)
-CREATE TABLE IF NOT EXISTS email_tracking (
-    id TEXT PRIMARY KEY,
-    message_id TEXT NOT NULL,
-    event_type TEXT NOT NULL, -- 'open', 'click'
-    occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    ip_address TEXT,
-    user_agent TEXT,
-    link_url TEXT, -- for clicks
-    FOREIGN KEY (message_id) REFERENCES email_messages(id) ON DELETE CASCADE
 );
 
 -- Update updated_at trigger for email_accounts
