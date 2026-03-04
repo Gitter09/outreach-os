@@ -49,7 +49,7 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
     const [email, setEmail] = useState("");
     const [linkedinUrl, setLinkedinUrl] = useState("");
     const [companyWebsite, setCompanyWebsite] = useState("");
-    const [selectedStatusId, setSelectedStatusId] = useState(initialStatusId || "stat-new");
+    const [selectedStatusId, setSelectedStatusId] = useState(initialStatusId || "");
 
     // New status handling
     const [isCreatingNewStatus, setIsCreatingNewStatus] = useState(false);
@@ -73,12 +73,20 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
     // Sync status if initialStatusId changes (e.g. clicking different column 'New' buttons)
     useEffect(() => {
         if (open) {
-            setSelectedStatusId(initialStatusId || "stat-new");
+            setSelectedStatusId(initialStatusId || "");
             setIsCreatingNewStatus(false);
             setNewStatusLabel("");
             setSelectedColor("#3b82f6");
         }
     }, [initialStatusId, open]);
+
+    // Once statuses load, pre-select the default (or first) status if nothing is chosen
+    useEffect(() => {
+        if (statuses.length > 0 && !selectedStatusId) {
+            const defaultStatus = statuses.find((s) => s.is_default) ?? statuses[0];
+            setSelectedStatusId(defaultStatus.id);
+        }
+    }, [statuses, selectedStatusId]);
 
     const resetForm = () => {
         setFirstName("");
@@ -89,7 +97,7 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
         setEmail("");
         setLinkedinUrl("");
         setCompanyWebsite("");
-        setSelectedStatusId(initialStatusId || "stat-new");
+        setSelectedStatusId(initialStatusId || "");
         setIsCreatingNewStatus(false);
         setNewStatusLabel("");
         setSelectedColor("#3b82f6");

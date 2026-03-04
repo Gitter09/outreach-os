@@ -193,11 +193,43 @@ async fn add_contact(db: tauri::State<'_, Db>, args: AddContactArgs) -> Result<S
     let pool = db.pool();
     let id = uuid::Uuid::new_v4().to_string();
 
-    // Determine status_id and label
-    let (final_status_id, final_status_label) = if let Some(sid) = args.status_id {
-        (sid, "Custom")
+    // Normalize: treat empty string the same as None
+    let provided_status_id = args.status_id.filter(|s| !s.trim().is_empty());
+
+    // Resolve the final status_id — use provided value, or look up the
+    // default status from the DB so we never hardcode a specific ID.
+    let (final_status_id, final_status_label) = if let Some(sid) = provided_status_id {
+        // Verify the provided status_id actually exists to give a cleaner error
+        let exists: Option<(String, String)> =
+            sqlx::query_as("SELECT id, label FROM statuses WHERE id = ?")
+                .bind(&sid)
+                .fetch_optional(pool)
+                .await
+                .map_err(|e: sqlx::Error| e.to_string())?;
+
+        match exists {
+            Some((id, label)) => (id, label),
+            None => return Err(format!("Status '{}' does not exist.", sid).into()),
+        }
     } else {
-        ("stat-new".to_string(), "New")
+        // Fallback: query the DB for is_default = 1, or just the first status
+        let default_status: Option<(String, String)> = sqlx::query_as(
+            "SELECT id, label FROM statuses ORDER BY is_default DESC, position ASC LIMIT 1",
+        )
+        .fetch_optional(pool)
+        .await
+        .map_err(|e: sqlx::Error| e.to_string())?;
+
+        match default_status {
+            Some((id, label)) => (id, label),
+            None => {
+                return Err(
+                    "No statuses found in database. Please create a status first."
+                        .to_string()
+                        .into(),
+                )
+            }
+        }
     };
 
     sqlx::query("INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, status, status_id, title, company, location, company_website) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
@@ -206,8 +238,8 @@ async fn add_contact(db: tauri::State<'_, Db>, args: AddContactArgs) -> Result<S
         .bind(args.last_name)
         .bind(args.email)
         .bind(args.linkedin_url)
-        .bind(final_status_label) // Legacy status field
-        .bind(final_status_id)
+        .bind(&final_status_label) // Legacy status field
+        .bind(&final_status_id)
         .bind(args.title)
         .bind(args.company)
         .bind(args.location)
