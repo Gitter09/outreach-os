@@ -15,20 +15,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { useErrors } from "@/hooks/use-errors";
-
-interface EmailAccount {
-    id: string;
-    provider: string;
-    email: string;
-    created_at: string;
-    expires_at?: number;
-    last_synced_at?: string;
-}
-
-interface CredentialStatus {
-    gmail_configured: boolean;
-    outlook_configured: boolean;
-}
+import { EmailAccount } from "@/types/crm";
 
 interface SyncResult {
     account_id: string;
@@ -45,12 +32,12 @@ export function EmailSettingsTab() {
     const { handleError } = useErrors();
     const [loading, setLoading] = useState(false);
     const [connecting, setConnecting] = useState<"gmail" | "outlook" | null>(null);
-    const [credentialStatus, setCredentialStatus] = useState<CredentialStatus | null>(null);
     const [setupProvider, setSetupProvider] = useState<"gmail" | "outlook" | null>(null);
     const [clientId, setClientId] = useState("");
     const [clientSecret, setClientSecret] = useState("");
     const [saving, setSaving] = useState(false);
     const [syncing, setSyncing] = useState<string | null>(null); // account_id or "all"
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const fetchAccounts = async () => {
         setLoading(true);
@@ -65,18 +52,8 @@ export function EmailSettingsTab() {
     };
 
 
-    const checkCredentials = async () => {
-        try {
-            const status = await invoke<CredentialStatus>("check_email_credentials");
-            setCredentialStatus(status);
-        } catch (error) {
-            console.error("Failed to check credentials:", error);
-        }
-    };
-
     useEffect(() => {
         fetchAccounts();
-        checkCredentials();
     }, []);
 
     const handleSaveCredentials = async () => {
@@ -93,10 +70,8 @@ export function EmailSettingsTab() {
                 clientSecret: clientSecret.trim(),
             });
             toast.success(`${setupProvider === "gmail" ? "Gmail" : "Outlook"} credentials saved successfully`);
-            setSetupProvider(null);
             setClientId("");
             setClientSecret("");
-            checkCredentials();
         } catch (error) {
             handleError(error, "Failed to save credentials");
         } finally {
@@ -105,23 +80,20 @@ export function EmailSettingsTab() {
     };
 
     const handleConnect = async (provider: "gmail" | "outlook") => {
-        const isConfigured = provider === "gmail"
-            ? credentialStatus?.gmail_configured
-            : credentialStatus?.outlook_configured;
-
-        if (!isConfigured) {
-            setSetupProvider(provider);
-            return;
-        }
-
         setConnecting(provider);
         try {
             const command = provider === "gmail" ? "gmail_connect" : "outlook_connect";
             const result = await invoke<string>(command);
             toast.success(result);
             fetchAccounts();
-        } catch (e) {
-            handleError(e, `Failed to connect ${provider}`);
+        } catch (e: any) {
+            // Check if it's a "not configured" error
+            const errorStr = String(e);
+            if (errorStr.includes("credentials not configured") || errorStr.includes("disabled while in beta")) {
+                setSetupProvider(provider);
+            } else {
+                handleError(e, `Failed to connect ${provider}`);
+            }
         } finally {
             setConnecting(null);
         }
@@ -260,15 +232,22 @@ export function EmailSettingsTab() {
                             {connecting === "gmail" ? (
                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</>
                             ) : (
-                                <>
-                                    {credentialStatus?.gmail_configured ? (
-                                        <><Plus className="mr-2 h-4 w-4" /> Connect Gmail</>
-                                    ) : (
-                                        <><Key className="mr-2 h-4 w-4" /> Setup Gmail</>
-                                    )}
-                                </>
+                                <><Plus className="mr-2 h-4 w-4" /> Connect Gmail</>
                             )}
                         </Button>
+                        <div className="mt-2 text-center">
+                            <Button
+                                variant="link"
+                                size="sm"
+                                className="text-[10px] text-muted-foreground h-auto p-0"
+                                onClick={() => {
+                                    setSetupProvider("gmail");
+                                    setShowAdvanced(true);
+                                }}
+                            >
+                                Custom Credentials
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -289,15 +268,22 @@ export function EmailSettingsTab() {
                             {connecting === "outlook" ? (
                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</>
                             ) : (
-                                <>
-                                    {credentialStatus?.outlook_configured ? (
-                                        <><Plus className="mr-2 h-4 w-4" /> Connect Outlook</>
-                                    ) : (
-                                        <><Key className="mr-2 h-4 w-4" /> Setup Outlook</>
-                                    )}
-                                </>
+                                <><Plus className="mr-2 h-4 w-4" /> Connect Outlook</>
                             )}
                         </Button>
+                        <div className="mt-2 text-center">
+                            <Button
+                                variant="link"
+                                size="sm"
+                                className="text-[10px] text-muted-foreground h-auto p-0"
+                                onClick={() => {
+                                    setSetupProvider("outlook");
+                                    setShowAdvanced(true);
+                                }}
+                            >
+                                Custom Credentials
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -425,66 +411,91 @@ export function EmailSettingsTab() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <div className="bg-muted p-4 rounded-lg space-y-2">
-                            <p className="text-sm font-medium">Step 1: Create OAuth App</p>
-                            <p className="text-sm text-muted-foreground">
-                                {setupProvider === "gmail"
-                                    ? "Go to Google Cloud Console and create a new OAuth 2.0 Client ID (Desktop app type)."
-                                    : "Go to Azure Portal and register a new app with redirect URI: http://localhost:8420"}
-                            </p>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => window.open(getSetupGuideUrl(setupProvider!), "_blank")}
-                            >
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                Open {setupProvider === "gmail" ? "Google Cloud Console" : "Azure Portal"}
-                            </Button>
-                        </div>
+                        {!showAdvanced ? (
+                            <div className="bg-primary/5 p-6 rounded-lg text-center border border-primary/20">
+                                <Key className="h-10 w-10 text-primary mx-auto mb-4 opacity-50" />
+                                <h4 className="text-base font-semibold mb-1">Standard Setup Preferred</h4>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Standard users can usually just click the main "Connect" button on the previous screen.
+                                    Only use this dialog if you are a developer or have your own Cloud Console project.
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowAdvanced(true)}
+                                    className="gap-2"
+                                >
+                                    <Key className="h-4 w-4" /> Configure Custom Credentials
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="bg-muted p-4 rounded-lg space-y-2">
+                                    <p className="text-sm font-medium">Step 1: Create OAuth App</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {setupProvider === "gmail"
+                                            ? "Go to Google Cloud Console and create a new OAuth 2.0 Client ID (Desktop app type)."
+                                            : "Go to Azure Portal and register a new app with redirect URI: http://localhost:8420"}
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={() => window.open(getSetupGuideUrl(setupProvider!), "_blank")}
+                                    >
+                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                        Open {setupProvider === "gmail" ? "Google Cloud Console" : "Azure Portal"}
+                                    </Button>
+                                </div>
 
-                        <div className="space-y-3">
-                            <div>
-                                <Label htmlFor="client-id">Client ID</Label>
-                                <Input
-                                    id="client-id"
-                                    placeholder="Enter your OAuth Client ID"
-                                    value={clientId}
-                                    onChange={(e) => setClientId(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="client-secret">Client Secret</Label>
-                                <Input
-                                    id="client-secret"
-                                    type="password"
-                                    placeholder="Enter your OAuth Client Secret"
-                                    value={clientSecret}
-                                    onChange={(e) => setClientSecret(e.target.value)}
-                                />
-                            </div>
-                        </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <Label htmlFor="client-id">Client ID</Label>
+                                        <Input
+                                            id="client-id"
+                                            placeholder="Enter your OAuth Client ID"
+                                            value={clientId}
+                                            onChange={(e) => setClientId(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="client-secret">Client Secret</Label>
+                                        <Input
+                                            id="client-secret"
+                                            type="password"
+                                            placeholder="Enter your OAuth Client Secret"
+                                            value={clientSecret}
+                                            onChange={(e) => setClientSecret(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         <div className="flex gap-2 pt-2">
                             <Button
                                 variant="outline"
                                 className="flex-1"
-                                onClick={() => setSetupProvider(null)}
+                                onClick={() => {
+                                    setSetupProvider(null);
+                                    setShowAdvanced(false);
+                                }}
                                 disabled={saving}
                             >
                                 Cancel
                             </Button>
-                            <Button
-                                className="flex-1"
-                                onClick={handleSaveCredentials}
-                                disabled={saving}
-                            >
-                                {saving ? (
-                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
-                                ) : (
-                                    "Save & Continue"
-                                )}
-                            </Button>
+                            {showAdvanced && (
+                                <Button
+                                    className="flex-1"
+                                    onClick={handleSaveCredentials}
+                                    disabled={saving}
+                                >
+                                    {saving ? (
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                                    ) : (
+                                        "Save & Continue"
+                                    )}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </DialogContent>

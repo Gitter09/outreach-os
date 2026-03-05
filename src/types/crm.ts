@@ -40,4 +40,30 @@ export interface Tag {
     id: string;
     name: string;
     color: string;
+    created_at: string;
+}
+
+export interface EmailAccount {
+    id: string;
+    provider: string;
+    email: string;
+    expires_at?: number;
+    last_synced_at?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface EmailMessage {
+    id: string;
+    thread_id: string;
+    from_email: string;
+    to_email: string;
+    subject?: string;
+    body?: string;
+    html_body?: string;
+    sent_at?: string;
+    status?: string;
+    provider_message_id?: string;
+    manually_assigned?: number;
+    created_at: string;
 }

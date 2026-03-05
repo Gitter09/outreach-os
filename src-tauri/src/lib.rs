@@ -3,6 +3,7 @@ use tauri::Manager;
 
 mod error;
 use error::AppError;
+mod scheduler; // Added scheduler module
 
 pub fn extract_linkedin_slug(url: &str) -> Option<&str> {
     // Match /in/username or /pub/username patterns
@@ -142,7 +143,7 @@ async fn get_statuses(
 ) -> Result<Vec<outreach_core::models::Status>, AppError> {
     let pool = db.pool();
     let statuses = sqlx::query_as::<sqlx::Sqlite, outreach_core::models::Status>(
-        "SELECT * FROM statuses ORDER BY position ASC",
+        "SELECT id, label, color, position, is_default FROM statuses ORDER BY position ASC",
     )
     .fetch_all(pool)
     .await
@@ -366,27 +367,83 @@ async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Re
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Load environment variables from .env and .env.local
+    dotenvy::dotenv().ok();
+    dotenvy::from_filename(".env.local").ok();
+    dotenvy::from_filename("../.env.local").ok();
+
+    let clerk_key = std::env::var("VITE_CLERK_PUBLISHABLE_KEY")
+        .or_else(|_| std::env::var("CLERK_PUBLISHABLE_KEY"))
+        .unwrap_or_else(|_| {
+            option_env!("VITE_CLERK_PUBLISHABLE_KEY")
+                .unwrap_or("")
+                .to_string()
+        });
+
+    println!(
+        "[Clerk] Initializing with key: {}...",
+        if clerk_key.is_empty() {
+            "EMPTY"
+        } else {
+            &clerk_key[..10]
+        }
+    );
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(
+            tauri_plugin_clerk::ClerkPluginBuilder::new()
+                .publishable_key(clerk_key)
+                .with_tauri_store()
+                .build(),
+        )
         .setup(|app| {
             let app_handle = app.handle();
+            println!("[Boot] Starting OutreachOS production diagnostics...");
+
             let app_dir = app_handle
                 .path()
                 .app_data_dir()
+                .map_err(|e| {
+                    eprintln!("[Boot Error] Failed to get app data dir: {}", e);
+                    e
+                })
                 .expect("failed to get app data dir");
 
+            println!("[Boot] App Data Dir: {:?}", app_dir);
+
             // Ensure directory exists
-            std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
+            std::fs::create_dir_all(&app_dir)
+                .map_err(|e| {
+                    eprintln!("[Boot Error] Failed to create app data dir: {}", e);
+                    e
+                })
+                .expect("failed to create app data dir");
 
             let db_path = app_dir.join("outreach.db");
             let db_path_str = db_path.to_str().expect("invalid path");
+            println!("[Boot] Database Path: {}", db_path_str);
 
             let db = tauri::async_runtime::block_on(async {
-                let result = Db::new(db_path_str).await.expect("failed to init core");
+                println!("[Boot] Initializing Core Database...");
+                let result = Db::new(db_path_str)
+                    .await
+                    .map_err(|e| {
+                        eprintln!("[Boot Error] Database initialization failed: {:?}", e);
+                        e
+                    })
+                    .expect("failed to init core");
+                println!("[Boot] Core Database Initialized.");
                 result
             });
 
+            println!("[Boot] Starting Email Scheduler...");
+            scheduler::start_email_scheduler(app_handle.clone(), db.clone());
+
+            println!("[Boot] Setup complete, managing state.");
             app.manage(db);
             Ok(())
         })
@@ -788,15 +845,17 @@ async fn clear_all_data(db: tauri::State<'_, Db>) -> Result<(), AppError> {
 async fn export_all_data(db: tauri::State<'_, Db>) -> Result<String, AppError> {
     let pool = db.pool();
 
-    let contacts =
-        sqlx::query_as::<sqlx::Sqlite, outreach_core::models::Contact>("SELECT * FROM contacts")
-            .fetch_all(pool)
-            .await?;
+    let contacts = sqlx::query_as::<sqlx::Sqlite, outreach_core::models::Contact>(
+        "SELECT id, company_id, first_name, last_name, email, linkedin_url, title, company, location, company_website, status, status_id, status_label, status_color, intelligence_summary, last_interaction_at, last_contacted_date, next_contact_date, cadence_stage, created_at, updated_at FROM contacts"
+    )
+    .fetch_all(pool)
+    .await?;
 
-    let statuses =
-        sqlx::query_as::<sqlx::Sqlite, outreach_core::models::Status>("SELECT * FROM statuses")
-            .fetch_all(pool)
-            .await?;
+    let statuses = sqlx::query_as::<sqlx::Sqlite, outreach_core::models::Status>(
+        "SELECT id, label, color, position, is_default FROM statuses",
+    )
+    .fetch_all(pool)
+    .await?;
 
     let settings_map = outreach_core::settings::SettingsManager::new(pool.clone())
         .get_all()
@@ -1121,7 +1180,7 @@ async fn update_contacts_status_bulk(
 async fn get_tags(db: tauri::State<'_, Db>) -> Result<Vec<outreach_core::models::Tag>, AppError> {
     let pool = db.pool();
     let tags = sqlx::query_as::<sqlx::Sqlite, outreach_core::models::Tag>(
-        "SELECT * FROM tags ORDER BY name ASC",
+        "SELECT id, name, color, created_at FROM tags ORDER BY name ASC",
     )
     .fetch_all(pool)
     .await?;

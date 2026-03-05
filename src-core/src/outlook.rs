@@ -18,6 +18,11 @@ const MS_SCOPES: &[&str] = &[
     "https://graph.microsoft.com/Mail.Read",
 ];
 
+// Centralized OAuth Defaults
+// To be replaced with actual Client ID/Secret from Azure Portal
+const DEFAULT_OUTLOOK_CLIENT_ID: &str = "PLACEHOLDER_OUTLOOK_CLIENT_ID";
+const DEFAULT_OUTLOOK_CLIENT_SECRET: &str = "PLACEHOLDER_OUTLOOK_CLIENT_SECRET";
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OAuthTokenResponse {
     pub access_token: String,
@@ -50,10 +55,18 @@ impl OutlookClient {
     }
 
     fn load_credentials(&self) -> Result<(String, String)> {
+        // Try to load from keychain first (user override)
         let client_id = crate::crypto::get_credential("outlook", "client_id")
-            .map_err(|_| anyhow!("Outlook credentials not configured. Please add your Microsoft OAuth credentials in Settings."))?;
+            .unwrap_or_else(|_| DEFAULT_OUTLOOK_CLIENT_ID.to_string());
+
         let client_secret = crate::crypto::get_credential("outlook", "client_secret")
-            .map_err(|_| anyhow!("Outlook credentials not configured. Please add your Microsoft OAuth credentials in Settings."))?;
+            .unwrap_or_else(|_| DEFAULT_OUTLOOK_CLIENT_SECRET.to_string());
+
+        if client_id == "PLACEHOLDER_OUTLOOK_CLIENT_ID"
+            || client_secret == "PLACEHOLDER_OUTLOOK_CLIENT_SECRET"
+        {
+            return Err(anyhow!("Outlook credentials not configured. Standard login is currently disabled while in beta."));
+        }
 
         Ok((client_id, client_secret))
     }

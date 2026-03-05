@@ -1,20 +1,10 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Contact } from "@/types/crm";
+import { Contact, EmailMessage } from "@/types/crm";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Mail, ArrowUpRight, ArrowDownLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-
-interface EmailMessage {
-    id: string;
-    from_email: string;
-    to_email: string;
-    subject: string;
-    body: string;
-    sent_at: string;
-    status: string;
-}
 
 
 
@@ -35,7 +25,7 @@ function EmailMessageItem({ email, contact }: { email: EmailMessage, contact: Co
                     <h4 className="text-sm font-semibold">{email.subject || "(No Subject)"}</h4>
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center">
                         <Calendar className="h-3 w-3 mr-1" />
-                        {format(new Date(email.sent_at), "MMM d, yyyy")}
+                        {email.sent_at ? format(new Date(email.sent_at), "MMM d, yyyy") : "(Unknown Date)"}
                     </span>
                 </div>
                 <div className="flex justify-between items-center text-xs text-muted-foreground">

@@ -66,3 +66,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Override Clerk UserButton text color to adapt to app theme */
+.cl-userButtonOuterIdentifier {
+  color: hsl(var(--foreground)) !important;
+}

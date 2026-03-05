@@ -2,8 +2,7 @@ import { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { TopCommandBar } from "./top-command-bar";
 import { cn } from "@/lib/utils";
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/clerk-react";
-import { Button } from "@/components/ui/button";
+import { UserButton, useUser } from "@clerk/react";
 
 interface PageHeaderProps {
     title?: string;
@@ -24,6 +23,7 @@ export function PageHeader({
 }: PageHeaderProps) {
     const location = useLocation();
     const isSettings = location.pathname.startsWith("/settings");
+    const { user } = useUser();
 
     // Override showSearch if on settings page
     const shouldShowSearch = showSearch && !isSettings;
@@ -48,25 +48,21 @@ export function PageHeader({
                 )}
                 <div className="flex items-center gap-4">
                     {children}
-                    <div className="flex items-center gap-2">
-                        <SignedOut>
-                            <SignInButton mode="modal">
-                                <Button variant="ghost" size="sm">Sign In</Button>
-                            </SignInButton>
-                            <SignUpButton mode="modal">
-                                <Button size="sm">Sign Up</Button>
-                            </SignUpButton>
-                        </SignedOut>
-                        <SignedIn>
-                            <UserButton
-                                afterSignOutUrl="/"
-                                appearance={{
-                                    elements: {
-                                        userButtonAvatarBox: "h-8 w-8"
-                                    }
-                                }}
-                            />
-                        </SignedIn>
+                    <div className="flex items-center gap-3 pl-2 sm:pl-4 border-l">
+                        {user && (
+                            <div className="flex flex-col text-right hidden sm:flex">
+                                <span className="text-sm font-medium leading-none text-foreground truncate">
+                                    {user.fullName || user.primaryEmailAddress?.emailAddress}
+                                </span>
+                            </div>
+                        )}
+                        <UserButton
+                            appearance={{
+                                elements: {
+                                    userButtonAvatarBox: "h-8 w-8"
+                                }
+                            }}
+                        />
                     </div>
                 </div>
             </div>

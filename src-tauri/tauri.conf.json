@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://gmail.googleapis.com https://graph.microsoft.com https://login.microsoftonline.com https://www.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
+      "csp": "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://accounts.google.com https://oauth2.googleapis.com https://gmail.googleapis.com https://graph.microsoft.com https://login.microsoftonline.com https://www.googleapis.com; img-src 'self' data: https: blob: https://img.clerk.com; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; worker-src 'self' blob:;"
     }
   },
   "bundle": {

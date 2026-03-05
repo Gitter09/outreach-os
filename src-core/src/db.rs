@@ -152,12 +152,6 @@ pub mod models {
 
         pub intelligence_summary: Option<String>,
 
-        // AI Insights
-        pub ai_talking_points: Option<String>,
-        pub ai_company_intel: Option<String>,
-        pub ai_last_analyzed: Option<DateTime<Utc>>,
-        pub ai_profile_version: Option<i32>,
-
         // Dates & Cadence
         pub last_interaction_at: Option<DateTime<Utc>>, // kept for history
         pub last_contacted_date: Option<DateTime<Utc>>, // explicit field
@@ -202,9 +196,12 @@ pub mod models {
         pub id: String,
         pub provider: String, // 'gmail', 'outlook'
         pub email: String,
+        #[serde(skip)]
         pub access_token: String,
+        #[serde(skip)]
         pub refresh_token: Option<String>,
         pub expires_at: Option<i64>,
+        pub last_synced_at: Option<DateTime<Utc>>,
         pub created_at: DateTime<Utc>,
         pub updated_at: DateTime<Utc>,
     }
@@ -231,6 +228,8 @@ pub mod models {
         pub html_body: Option<String>,
         pub sent_at: Option<DateTime<Utc>>,
         pub status: Option<String>, // 'received', 'sent', 'draft'
+        pub provider_message_id: Option<String>,
+        pub manually_assigned: Option<i32>,
         pub created_at: DateTime<Utc>,
     }
 

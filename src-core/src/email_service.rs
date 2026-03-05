@@ -99,7 +99,7 @@ impl EmailService {
     pub async fn get_account(&self, account_id: &str) -> Result<EmailAccount> {
         let pool = self.db.pool();
         let mut account =
-            sqlx::query_as::<_, EmailAccount>("SELECT * FROM email_accounts WHERE id = ?")
+            sqlx::query_as::<_, EmailAccount>("SELECT id, provider, email, access_token, refresh_token, expires_at, last_synced_at, created_at, updated_at FROM email_accounts WHERE id = ?")
                 .bind(account_id)
                 .fetch_optional(pool)
                 .await?
@@ -163,7 +163,7 @@ impl EmailService {
 
     pub async fn list_accounts(&self) -> Result<Vec<EmailAccount>> {
         let accounts = sqlx::query_as::<_, EmailAccount>(
-            "SELECT * FROM email_accounts ORDER BY created_at DESC",
+            "SELECT id, provider, email, access_token, refresh_token, expires_at, last_synced_at, created_at, updated_at FROM email_accounts ORDER BY created_at DESC",
         )
         .fetch_all(self.db.pool())
         .await?;
@@ -197,7 +197,7 @@ impl EmailService {
         };
 
         let emails = sqlx::query_as::<_, crate::db::models::EmailMessage>(
-            "SELECT * FROM email_messages WHERE from_email = ? OR to_email = ? ORDER BY sent_at DESC"
+            "SELECT id, thread_id, from_email, to_email, subject, body, html_body, sent_at, status, provider_message_id, manually_assigned, created_at FROM email_messages WHERE from_email = ? OR to_email = ? ORDER BY sent_at DESC"
         )
         .bind(&email)
         .bind(&email)

@@ -39,7 +39,6 @@ const mainNavItems: NavItem[] = [
     { label: "Notes", icon: StickyNote, path: "/notes" },
     { label: "Tasks", icon: CheckSquare, path: "/tasks" },
     { label: "Templates", icon: FileText, path: "/templates" },
-    { label: "Settings", icon: Settings, path: "/settings" },
 ];
 
 const settingsSubItems: NavItem[] = [
@@ -53,6 +52,7 @@ const settingsSubItems: NavItem[] = [
 export function AppSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
+
     const [collapsed, setCollapsed] = useState(() => {
         const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
         return saved === "true";
@@ -169,6 +169,30 @@ export function AppSidebar() {
                         return <div key={item.path}>{button}</div>;
                     })}
                 </nav>
+
+                {/* Footer: Settings */}
+                <div className="p-2 border-t mt-auto">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={() => navigate("/settings")}
+                                className={cn(
+                                    "w-full flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-md transition-all border",
+                                    isSettingsRoute
+                                        ? "bg-primary/10 text-primary border-primary/20"
+                                        : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted",
+                                    collapsed && "justify-center px-0"
+                                )}
+                            >
+                                <Settings className="h-4 w-4 shrink-0" />
+                                {!collapsed && <span>Settings</span>}
+                            </button>
+                        </TooltipTrigger>
+                        {collapsed && (
+                            <TooltipContent side="right">Settings</TooltipContent>
+                        )}
+                    </Tooltip>
+                </div>
             </aside>
         </TooltipProvider>
     );
