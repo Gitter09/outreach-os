@@ -23,21 +23,12 @@ env:
 
 jobs:
   build:
+    runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: macos-latest
-            os: self-hosted
-            name: macos
-          - platform: ubuntu-22.04
-            os: ubuntu-latest
-            name: linux
-          - platform: windows-latest
-            os: windows-latest
-            name: windows
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
 
-    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -83,6 +74,7 @@ jobs:
         run: bun run tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
 
 
       - name: Upload Artifacts (macOS)
