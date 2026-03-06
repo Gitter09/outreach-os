@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     Dialog,
     DialogContent,
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { invoke } from "@tauri-apps/api/core";
 import { useErrors } from "@/hooks/use-errors";
 import { EmailTemplate } from "@/types/crm";
@@ -34,6 +35,11 @@ export function EditTemplateDialog({
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
 
+    // We need a ref to the textarea to get the cursor position
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const AVAILABLE_VARIABLES = ["first_name", "last_name", "company", "title", "location"];
+
     useEffect(() => {
         if (open) {
             if (template) {
@@ -47,6 +53,24 @@ export function EditTemplateDialog({
             }
         }
     }, [open, template]);
+
+    const insertVariable = (variable: string) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const textToInsert = `{{${variable}}}`;
+
+        const newBody = body.substring(0, start) + textToInsert + body.substring(end);
+        setBody(newBody);
+
+        // Reset focus and cursor position after React re-renders
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
+        }, 0);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,15 +131,26 @@ export function EditTemplateDialog({
                         <Label htmlFor="body">Email Body</Label>
                         <Textarea
                             id="body"
-                            placeholder="Write your template here... use {{first_name}}, {{last_name}}, {{company}}, {{title}}, {{location}}"
+                            ref={textareaRef}
+                            placeholder="Write your template here..."
                             value={body}
                             onChange={(e) => setBody(e.target.value)}
                             disabled={isLoading}
                             rows={10}
                         />
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mt-1">
-                            Variables: {"{{first_name}}"}, {"{{last_name}}"}, {"{{company}}"}, {"{{title}}"}, {"{{location}}"}
-                        </p>
+                        <div className="flex flex-wrap gap-2 mt-1 items-center">
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mr-1">Insert:</span>
+                            {AVAILABLE_VARIABLES.map(v => (
+                                <Badge
+                                    key={v}
+                                    variant="secondary"
+                                    className="cursor-pointer hover:bg-muted font-mono text-[10px] px-1.5 py-0"
+                                    onClick={() => insertVariable(v)}
+                                >
+                                    {`{{${v}}}`}
+                                </Badge>
+                            ))}
+                        </div>
                     </div>
 
                     <DialogFooter className="pt-4">

@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            os: self-hosted
+            os: macos-latest
           - platform: ubuntu-22.04
             os: ubuntu-22.04
           - platform: windows-latest

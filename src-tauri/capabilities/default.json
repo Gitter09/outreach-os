@@ -18,16 +18,6 @@
         }
       ]
     },
-    "dialog:allow-open",
-    "clerk:default",
-    "store:default",
-    {
-      "identifier": "http:default",
-      "allow": [
-        {
-          "url": "https://*"
-        }
-      ]
-    }
+    "dialog:allow-open"
   ]
 }

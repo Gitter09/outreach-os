@@ -4,10 +4,7 @@ import App from "./App";
 import { SettingsProvider } from "./components/providers/settings-provider";
 import { ThemeProvider } from "./components/providers/theme-provider";
 
-const rootElement = document.getElementById("root") as HTMLElement;
-const root = ReactDOM.createRoot(rootElement);
-
-root.render(
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <SettingsProvider>
       <ThemeProvider>

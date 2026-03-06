@@ -20,6 +20,7 @@ export interface Contact {
 
     last_contacted_date?: string; // ISO string
     next_contact_date?: string;
+    next_contact_event?: string;
     cadence_stage?: number;
 
     intelligence_summary?: string;
@@ -66,6 +67,16 @@ export interface EmailMessage {
     provider_message_id?: string;
     manually_assigned?: number;
     created_at: string;
+}
+
+export interface ContactEvent {
+    id: string;
+    contact_id: string;
+    title: string;
+    description?: string;
+    event_at: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface EmailTemplate {

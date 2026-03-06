@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
     Popover,
@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Mail, Send, Loader2, Calendar as CalendarIcon, FileText } from "lucide-react";
 import { Contact, EmailTemplate } from "@/types/crm";
 import { format } from "date-fns";
@@ -63,6 +64,10 @@ export function ComposeEmailDialog({
     const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
     const [isScheduling, setIsScheduling] = useState(false);
 
+    // We need a ref to the textarea to get the cursor position
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const AVAILABLE_VARIABLES = ["first_name", "last_name", "company", "title", "location"];
 
     useEffect(() => {
         const fetchData = async () => {
@@ -93,7 +98,23 @@ export function ComposeEmailDialog({
         }
     }, [contact]);
 
+    const insertVariable = (variable: string) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
 
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const textToInsert = `{{${variable}}}`;
+
+        const newBody = body.substring(0, start) + textToInsert + body.substring(end);
+        setBody(newBody);
+
+        // Reset focus and cursor position after React re-renders
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
+        }, 0);
+    };
 
     const handleSend = async () => {
         if (!selectedAccount) {
@@ -261,11 +282,25 @@ export function ComposeEmailDialog({
                         <div className="space-y-2">
                             <Label>Message Body</Label>
                             <Textarea
+                                ref={textareaRef}
                                 value={body}
                                 onChange={(e) => setBody(e.target.value)}
                                 rows={12}
                                 className="font-sans"
                             />
+                            <div className="flex flex-wrap gap-2 mt-1 items-center">
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mr-1">Insert Variable:</span>
+                                {AVAILABLE_VARIABLES.map(v => (
+                                    <Badge
+                                        key={v}
+                                        variant="secondary"
+                                        className="cursor-pointer hover:bg-muted font-mono text-[10px] px-1.5 py-0"
+                                        onClick={() => insertVariable(v)}
+                                    >
+                                        {`{{${v}}}`}
+                                    </Badge>
+                                ))}
+                            </div>
                         </div>
 
                     </div>

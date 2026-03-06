@@ -156,6 +156,7 @@ pub mod models {
         pub last_interaction_at: Option<DateTime<Utc>>, // kept for history
         pub last_contacted_date: Option<DateTime<Utc>>, // explicit field
         pub next_contact_date: Option<DateTime<Utc>>,
+        pub next_contact_event: Option<String>,
         pub cadence_stage: Option<i32>,
 
         pub created_at: DateTime<Utc>,
@@ -244,6 +245,17 @@ pub mod models {
         pub status: String,
         pub error_message: Option<String>,
         pub created_at: DateTime<Utc>,
+    }
+
+    #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+    pub struct ContactEvent {
+        pub id: String,
+        pub contact_id: String,
+        pub title: String,
+        pub description: Option<String>,
+        pub event_at: DateTime<Utc>,
+        pub created_at: DateTime<Utc>,
+        pub updated_at: DateTime<Utc>,
     }
 
     #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]

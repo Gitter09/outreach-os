@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { TopCommandBar } from "./top-command-bar";
 import { cn } from "@/lib/utils";
-import { UserButton, useUser } from "@clerk/react";
 
 interface PageHeaderProps {
     title?: string;
@@ -23,7 +22,6 @@ export function PageHeader({
 }: PageHeaderProps) {
     const location = useLocation();
     const isSettings = location.pathname.startsWith("/settings");
-    const { user } = useUser();
 
     // Override showSearch if on settings page
     const shouldShowSearch = showSearch && !isSettings;
@@ -48,22 +46,6 @@ export function PageHeader({
                 )}
                 <div className="flex items-center gap-4">
                     {children}
-                    <div className="flex items-center gap-3 pl-2 sm:pl-4 border-l">
-                        {user && (
-                            <div className="flex flex-col text-right hidden sm:flex">
-                                <span className="text-sm font-medium leading-none text-foreground truncate">
-                                    {user.fullName || user.primaryEmailAddress?.emailAddress}
-                                </span>
-                            </div>
-                        )}
-                        <UserButton
-                            appearance={{
-                                elements: {
-                                    userButtonAvatarBox: "h-8 w-8"
-                                }
-                            }}
-                        />
-                    </div>
                 </div>
             </div>
         </header>

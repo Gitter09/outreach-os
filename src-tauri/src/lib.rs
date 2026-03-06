@@ -380,44 +380,9 @@ pub fn run() {
         }
     }
 
-    let clerk_key = std::env::var("VITE_CLERK_PUBLISHABLE_KEY")
-        .or_else(|_| std::env::var("CLERK_PUBLISHABLE_KEY"))
-        .unwrap_or_else(|_| {
-            option_env!("VITE_CLERK_PUBLISHABLE_KEY")
-                .unwrap_or("")
-                .to_string()
-        });
-
-    #[cfg(debug_assertions)]
-    println!(
-        "[Clerk] Initializing with key: {}...",
-        if clerk_key.is_empty() {
-            "EMPTY"
-        } else {
-            &clerk_key[..10]
-        }
-    );
-
-    if clerk_key.is_empty() {
-        eprintln!(
-            "[OutreachOS] FATAL: Clerk publishable key is missing.\n\
-             Ensure VITE_CLERK_PUBLISHABLE_KEY is set in .env.local and rebuild the app.\n\
-             The key must be available at compile time for production builds."
-        );
-        std::process::exit(1);
-    }
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(
-            tauri_plugin_clerk::ClerkPluginBuilder::new()
-                .publishable_key(clerk_key)
-                .with_tauri_store()
-                .build(),
-        )
         .setup(|app| {
             let app_handle = app.handle();
             #[cfg(debug_assertions)]
@@ -492,6 +457,11 @@ pub fn run() {
             delete_email_account,
             email_schedule,
             get_emails_for_contact,
+            sync_contact_emails,
+            get_contact_events,
+            create_contact_event,
+            update_contact_event,
+            delete_contact_event,
             save_api_key,
             get_settings,
             save_setting,
@@ -1436,5 +1406,138 @@ async fn remove_lock_pin(db: tauri::State<'_, Db>) -> Result<(), AppError> {
         .execute(pool)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(())
+}
+
+// ===== Contact Event Commands =====
+
+#[tauri::command]
+async fn get_contact_events(
+    db: tauri::State<'_, Db>,
+    contact_id: String,
+) -> Result<Vec<outreach_core::models::ContactEvent>, AppError> {
+    let pool = db.pool();
+    let events = sqlx::query_as::<_, outreach_core::models::ContactEvent>(
+        "SELECT * FROM contact_events WHERE contact_id = ? ORDER BY event_at DESC",
+    )
+    .bind(contact_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(events)
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateContactEventArgs {
+    contact_id: String,
+    title: String,
+    description: Option<String>,
+    event_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[tauri::command]
+async fn create_contact_event(
+    db: tauri::State<'_, Db>,
+    args: CreateContactEventArgs,
+) -> Result<String, AppError> {
+    let pool = db.pool();
+    let id = uuid::Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO contact_events (id, contact_id, title, description, event_at) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(&id)
+    .bind(args.contact_id)
+    .bind(args.title)
+    .bind(args.description)
+    .bind(args.event_at)
+    .execute(pool)
+    .await?;
+    Ok(id)
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateContactEventArgs {
+    id: String,
+    title: Option<String>,
+    description: Option<String>,
+    event_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[tauri::command]
+async fn update_contact_event(
+    db: tauri::State<'_, Db>,
+    args: UpdateContactEventArgs,
+) -> Result<(), AppError> {
+    let pool = db.pool();
+    sqlx::query(
+        "UPDATE contact_events SET 
+            title = COALESCE(?, title), 
+            description = COALESCE(?, description), 
+            event_at = COALESCE(?, event_at),
+            updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?",
+    )
+    .bind(args.title)
+    .bind(args.description)
+    .bind(args.event_at)
+    .bind(args.id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn delete_contact_event(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
+    let pool = db.pool();
+    sqlx::query("DELETE FROM contact_events WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn sync_contact_emails(db: tauri::State<'_, Db>, contact_id: String) -> Result<(), AppError> {
+    let pool = db.pool().clone();
+
+    // Trigger the background sync for all accounts associated with this contact
+    // We already have polling logic in various places, but here we can specifically
+    // trigger a sync for accounts that have threads with this contact.
+
+    // For now, we'll trigger a broad fetch_new_messages for all configured accounts
+    // and let the internal deduplication and thread matching handle the contact's updates.
+    let accounts =
+        sqlx::query_as::<_, outreach_core::models::EmailAccount>("SELECT * FROM email_accounts")
+            .fetch_all(&pool)
+            .await?;
+
+    for account in accounts {
+        let db_instance = db.inner().clone();
+        tokio::spawn(async move {
+            let service = outreach_core::EmailService::new(db_instance);
+            let _ = service.sync_account(&account.id).await;
+        });
+    }
+
+    // Also update the last_interaction_at for the contact based on the most recent message
+    tokio::spawn(async move {
+        let pool = pool;
+        let most_recent = sqlx::query_scalar::<_, chrono::DateTime<chrono::Utc>>(
+            "SELECT MAX(sent_at) FROM email_messages WHERE thread_id IN (SELECT id FROM email_threads WHERE contact_id = ?)"
+        )
+        .bind(&contact_id)
+        .fetch_optional(&pool)
+        .await;
+
+        if let Ok(Some(latest)) = most_recent {
+            let _ = sqlx::query("UPDATE contacts SET last_interaction_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                .bind(latest)
+                .bind(contact_id)
+                .execute(&pool)
+                .await;
+        }
+    });
+
     Ok(())
 }

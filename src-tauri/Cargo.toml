@@ -36,9 +36,6 @@ arboard = "3"
 keyring = "3.6.3"
 dirs = "5"
 thiserror = "2"
-tauri-plugin-clerk = "0.1.0"
-tauri-plugin-http = "2.0.0-rc.3"
-tauri-plugin-store = "2.0.0-rc.1"
 dotenvy = "0.15.7"
 
 
