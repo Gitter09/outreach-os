@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OutreachOS — The Private CRM for Serious Networkers</title>
+  <meta name="description" content="Privacy-first, offline-capable CRM for founders, VCs, and professional networkers. Your data never leaves your machine. Built with Tauri 2 + Rust.">
+  <meta property="og:title" content="OutreachOS — The Private CRM for Serious Networkers">
+  <meta property="og:description" content="Your relationships. Your machine. No cloud, no telemetry, no compromise.">
+  <meta name="theme-color" content="#03030a">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     NAV
+══════════════════════════════════════════ -->
+<nav id="nav">
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-mark">O</div>
+    <span class="nav-logo-name">OutreachOS</span>
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank">Docs</a></li>
+    <li><a href="https://github.com/Gitter09/outreach-os" target="_blank">GitHub</a></li>
+  </ul>
+
+  <div class="nav-right">
+    <a href="https://github.com/Gitter09/outreach-os/releases" class="btn btn-primary">
+      Download Free
+    </a>
+  </div>
+</nav>
+
+
+<!-- ══════════════════════════════════════════
+     HERO — SPACE SCENE
+══════════════════════════════════════════ -->
+<section id="hero">
+  <canvas id="starfield" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+
+  <div class="nebula n1"></div>
+  <div class="nebula n2"></div>
+  <div class="nebula n3"></div>
+
+  <!-- shooting stars -->
+  <div class="sstar ss1"></div>
+  <div class="sstar ss2"></div>
+
+  <!-- headline -->
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      v0.1.2 — Now Available for macOS &amp; Windows
+    </div>
+
+    <h1>
+      <span class="h1-line1">Relationship OS<br>for serious</span><br>
+      <span class="h1-line2">operators.</span>
+    </h1>
+
+    <p class="hero-sub">
+      Privacy-first, offline-capable CRM built for founders, VCs, and professional networkers. Your data never leaves your machine — encrypted, always.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="https://github.com/Gitter09/outreach-os/releases" class="btn btn-primary btn-lg">
+        ↓&nbsp;&nbsp;Download for macOS
+      </a>
+      <a href="#features" class="btn btn-ghost btn-lg">
+        See how it works&nbsp;&nbsp;→
+      </a>
+    </div>
+  </div>
+
+  <!-- ── INTERACTIVE APP PREVIEW ── -->
+  <div class="hero-preview">
+    <div class="preview-tabs">
+      <button class="tab-btn active" data-tab="contacts">Contacts</button>
+      <button class="tab-btn" data-tab="pipeline">Pipeline</button>
+      <button class="tab-btn" data-tab="outreach">Outreach</button>
+      <button class="tab-btn" data-tab="intel">Intel</button>
+    </div>
+
+    <div class="app-window">
+      <div class="win-chrome">
+        <span class="win-dot wd-r"></span>
+        <span class="win-dot wd-y"></span>
+        <span class="win-dot wd-g"></span>
+      </div>
+
+      <!-- ── PANE 1: CONTACTS TABLE ── -->
+      <div class="tab-pane active" id="pane-contacts">
+        <div class="mock-sidebar">
+          <div class="ms-icon on" title="Dashboard">⊞</div>
+          <div class="ms-icon on" title="Contacts" style="background:rgba(34,197,94,.14);color:var(--accent)">◎</div>
+          <div class="ms-icon" title="Templates">☰</div>
+          <div class="ms-icon bot" title="Settings">⚙</div>
+        </div>
+        <div class="mock-main">
+          <div class="mock-topbar">
+            <span class="mock-title">Contacts</span>
+            <div class="mock-search">
+              <span style="opacity:.4;font-size:13px">⌕</span>
+              <span>Search by name, company…</span>
+              <span style="margin-left:auto;opacity:.3;font-size:10.5px;font-family:'DM Sans',sans-serif">⌘K</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <div style="padding:5px 10px;border-radius:7px;font-size:10.5px;border:1px solid var(--border);color:var(--text-2)">Filter &amp; Sort</div>
+              <div class="mock-btn">+ Add Contact</div>
+            </div>
+          </div>
+          <div class="mock-table" style="padding:0 8px;flex:1;overflow:hidden">
+            <div class="t-head">
+              <span>Target</span><span>Email</span><span>Status</span>
+            </div>
+            <div class="t-row">
+              <div><div class="t-name">Harshit Singh</div><div class="t-role">CEO at Acme</div></div>
+              <div class="t-email">harshit.singh.work@outlook.com</div>
+              <div><span class="chip chip-new">New</span></div>
+            </div>
+            <div class="t-row">
+              <div><div class="t-name">Kartavya Asthana</div><div class="t-role">IB Associate · Avendus Capital</div></div>
+              <div class="t-email">kartavya.asthana@avendus.com</div>
+              <div><span class="chip chip-con">Contacted</span></div>
+            </div>
+            <div class="t-row">
+              <div><div class="t-name">Vaibhav Shah</div><div class="t-role">VP at o3 Capital</div></div>
+              <div class="t-email">vaibhav.shah@o3capital.com</div>
+              <div><span class="chip chip-int">Interested</span></div>
+            </div>
+            <div class="t-row">
+              <div><div class="t-name">Jigar Shah</div><div class="t-role">ED – PE and VC</div></div>
+              <div class="t-email">jigar.shah@avendus.com</div>
+              <div><span class="chip chip-new">New</span></div>
+            </div>
+            <div class="t-row">
+              <div><div class="t-name">Ramarao Yechuri</div><div class="t-role">MD CEO · Spark Capital</div></div>
+              <div class="t-email">ramarao@sparkcapital.in</div>
+              <div><span class="chip chip-rep">Replied</span></div>
+            </div>
+            <div class="t-row">
+              <div><div class="t-name">Harsh Vardhan</div><div class="t-role">VP – PM</div></div>
+              <div class="t-email">harsh.vardhan@avendus.com</div>
+              <div><span class="chip chip-con">Contacted</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANE 2: PIPELINE / KANBAN ── -->
+      <div class="tab-pane" id="pane-pipeline">
+        <div class="mock-sidebar">
+          <div class="ms-icon">⊞</div>
+          <div class="ms-icon on">◎</div>
+          <div class="ms-icon">☰</div>
+          <div class="ms-icon bot">⚙</div>
+        </div>
+        <div class="mock-main" style="flex-direction:row;overflow:hidden">
+          <div style="flex:1;display:flex;flex-direction:column">
+            <div class="mock-topbar">
+              <span class="mock-title">Pipeline</span>
+              <div style="display:flex;gap:6px;align-items:center">
+                <div style="padding:5px 10px;border-radius:7px;font-size:10.5px;border:1px solid var(--border);color:var(--text-2)">Table</div>
+                <div style="padding:5px 10px;border-radius:7px;font-size:10.5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);color:var(--text)">Kanban</div>
+              </div>
+            </div>
+            <div class="kanban-board">
+              <div class="k-col">
+                <div class="k-col-head"><span>New</span><span class="k-count">3</span></div>
+                <div class="k-card"><div class="k-card-name">Harshit Singh</div><div class="k-card-role">CEO at Acme</div></div>
+                <div class="k-card"><div class="k-card-name">Jigar Shah</div><div class="k-card-role">ED – PE and VC</div></div>
+                <div class="k-card"><div class="k-card-name">Harsh Vardhan</div><div class="k-card-role">VP – PM</div></div>
+              </div>
+              <div class="k-col">
+                <div class="k-col-head"><span>Contacted</span><span class="k-count">2</span></div>
+                <div class="k-card"><div class="k-card-name">Kartavya Asthana</div><div class="k-card-role">IB Associate</div></div>
+                <div class="k-card"><div class="k-card-name">Abhishek Jain</div><div class="k-card-role">AVP at Avendus</div></div>
+              </div>
+              <div class="k-col">
+                <div class="k-col-head"><span>Interested</span><span class="k-count">2</span></div>
+                <div class="k-card"><div class="k-card-name">Vaibhav Shah</div><div class="k-card-role">VP at o3 Capital</div></div>
+                <div class="k-card"><div class="k-card-name">Ramarao Yechuri</div><div class="k-card-role">MD CEO, Spark</div></div>
+              </div>
+              <div class="k-col">
+                <div class="k-col-head"><span>Replied</span><span class="k-count">1</span></div>
+                <div class="k-card"><div class="k-card-name">Sumit Aggarwal</div><div class="k-card-role">AVP</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANE 3: OUTREACH / COMPOSE ── -->
+      <div class="tab-pane" id="pane-outreach" style="flex-direction:column">
+        <div class="mock-sidebar" style="flex-direction:row;width:auto;height:42px;min-height:auto;border-right:none;border-bottom:1px solid rgba(255,255,255,.05);padding:0 12px;gap:12px;align-items:center">
+          <div class="ms-icon">⊞</div>
+          <div class="ms-icon on">✉</div>
+          <div class="ms-icon">☰</div>
+          <div class="ms-icon" style="margin-left:auto;margin-top:0">⚙</div>
+        </div>
+        <div style="flex:1;display:flex;overflow:hidden">
+          <!-- Contact mini list -->
+          <div style="width:190px;border-right:1px solid rgba(255,255,255,.05);overflow:hidden;flex-shrink:0">
+            <div style="padding:10px 12px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid rgba(255,255,255,.05)">Compose to</div>
+            <div style="padding:6px 8px;display:flex;flex-direction:column;gap:2px">
+              <div style="padding:8px 10px;border-radius:8px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.15);cursor:pointer">
+                <div style="font-size:11.5px;font-weight:500;color:var(--text)">Vaibhav Shah</div>
+                <div style="font-size:10px;color:var(--text-3);margin-top:2px">VP · o3 Capital</div>
+              </div>
+              <div style="padding:8px 10px;border-radius:8px;cursor:pointer">
+                <div style="font-size:11.5px;font-weight:500;color:var(--text-2)">Kartavya Asthana</div>
+                <div style="font-size:10px;color:var(--text-3);margin-top:2px">IB Associate</div>
+              </div>
+              <div style="padding:8px 10px;border-radius:8px;cursor:pointer">
+                <div style="font-size:11.5px;font-weight:500;color:var(--text-2)">Ramarao Yechuri</div>
+                <div style="font-size:10px;color:var(--text-3);margin-top:2px">MD CEO · Spark Capital</div>
+              </div>
+            </div>
+          </div>
+          <!-- Compose pane -->
+          <div class="compose-area">
+            <div class="compose-field">
+              <span>To</span>
+              <span style="color:var(--text);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);padding:2px 10px;border-radius:6px;font-size:11px">vaibhav.shah@o3capital.com</span>
+            </div>
+            <div class="compose-field">
+              <span>Subject</span>
+              <span style="color:var(--text)">Following up — OutreachOS Seed Round</span>
+            </div>
+            <div class="compose-field" style="gap:8px;border-bottom:1px solid rgba(255,255,255,.03)">
+              <span>Template</span>
+              <span style="color:var(--text-2);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:2px 10px;border-radius:6px;font-size:11px">VC Cold Outreach ▾</span>
+            </div>
+            <div class="compose-body">
+              Hi <em>Vaibhav</em>,<br><br>
+              I wanted to follow up on our conversation last week regarding the seed round. Given <em>o3 Capital</em>'s thesis on B2B SaaS, I think there's a real fit worth exploring...<br><br>
+              Would you be open to a 20-minute call this week?
+            </div>
+            <div class="tracking-row">
+              <span class="track-dot"></span>
+              <span>Email tracking enabled — open &amp; click events will be recorded</span>
+            </div>
+            <div class="compose-footer">
+              <div class="compose-actions">
+                <span class="ca-chip">📎 Attach</span>
+                <span class="ca-chip">⏰ Schedule</span>
+              </div>
+              <button class="send-btn">Send Email →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANE 4: CONTACT INTEL ── -->
+      <div class="tab-pane" id="pane-intel">
+        <div class="mock-sidebar">
+          <div class="ms-icon">⊞</div>
+          <div class="ms-icon on">◎</div>
+          <div class="ms-icon">☰</div>
+          <div class="ms-icon bot">⚙</div>
+        </div>
+        <div class="intel-left">
+          <div>
+            <div class="intel-avatar">HS</div>
+          </div>
+          <div>
+            <div class="intel-name">Harshit Singh</div>
+            <div class="intel-role">CEO</div>
+            <div class="intel-co">at Acme</div>
+          </div>
+          <button class="compose-mini">✉ Compose email</button>
+          <div class="intel-fields">
+            <div class="i-field"><span class="i-key">Email</span><span class="i-val" style="font-size:10px">harshit.singh.work@outlook.com</span></div>
+            <div class="i-field"><span class="i-key">Location</span><span class="i-val">Bengaluru, IN</span></div>
+            <div class="i-field"><span class="i-key">Company</span><span class="i-val">Acme</span></div>
+            <div class="i-field"><span class="i-key">LinkedIn</span><span class="i-val" style="color:var(--accent)">linkedin.com/in/…</span></div>
+            <div class="i-field"><span class="i-key">Last</span><span class="i-val">Never</span></div>
+            <div class="i-field"><span class="i-key">Tags</span><span class="i-val" style="color:var(--text-3)">+ Add tag</span></div>
+          </div>
+        </div>
+        <div class="intel-right">
+          <div class="intel-card">
+            <div class="intel-card-title">
+              <span>✦ Highlights</span>
+              <span style="color:var(--accent);font-size:10px;cursor:pointer;font-weight:400">✎ Update</span>
+            </div>
+            <div class="intel-card-body" style="color:var(--text-3);font-style:italic;font-size:11px">
+              No summary yet. Click "Update" to add focused insights about this contact.
+            </div>
+          </div>
+          <div class="intel-card">
+            <div class="intel-card-title">🎯 Pipeline Status</div>
+            <div class="pipeline-row">
+              <span class="pipeline-label" style="font-size:11.5px">Stage</span>
+              <span class="pipeline-chip">New ▾</span>
+            </div>
+            <div class="pipeline-bar"><div class="pipeline-fill"></div></div>
+          </div>
+          <div class="intel-card" style="display:flex;gap:16px">
+            <div style="flex:1;border-right:1px solid rgba(255,255,255,.05);padding-right:16px">
+              <div style="font-size:9.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px">📅 Upcoming Events</div>
+              <div style="font-size:11px;color:var(--text-3);font-style:italic">No upcoming events. <span style="color:var(--accent);font-style:normal;cursor:pointer">Schedule one →</span></div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:9.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px">✉ Emails</div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:10.5px;color:var(--text-2)">No emails yet</div>
+                <div style="font-size:10px;color:var(--accent);cursor:pointer">Compose first email →</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end app-window -->
+  </div><!-- end hero-preview -->
+
+  <div class="hero-fade"></div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     TRUST / TECH STRIP
+══════════════════════════════════════════ -->
+<div id="trust">
+  <div class="container">
+    <div class="trust-inner">
+      <span class="trust-label">Built with</span>
+      <span class="tech-pill"><span class="ico">🦀</span> Rust + Tauri 2</span>
+      <span class="tech-pill"><span class="ico">⚛</span> React 19</span>
+      <span class="tech-pill"><span class="ico">🔐</span> SQLCipher AES-256</span>
+      <span class="tech-pill"><span class="ico">✉</span> Gmail &amp; Outlook OAuth</span>
+      <span class="tech-pill"><span class="ico">💻</span> macOS · Windows</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     FEATURES — HORIZONTAL ALTERNATING
+══════════════════════════════════════════ -->
+<section id="features">
+  <div class="container">
+
+    <div class="feat-header reveal">
+      <div>
+        <p class="s-label">Why OutreachOS</p>
+        <h2>Precision tools.<br>Zero compromise.</h2>
+      </div>
+      <p class="feat-header-right">
+        Built for people who treat relationships like assets and privacy like a principle. Not another cloud CRM with a dark mode.
+      </p>
+    </div>
+
+    <!-- FEATURE 1: Contact Intelligence -->
+    <div class="feat-row">
+      <div class="feat-visual reveal d1">
+        <div class="feat-mock">
+          <div class="feat-mock-chrome">
+            <span class="fm-dot" style="background:#ff5f57"></span>
+            <span class="fm-dot" style="background:#febc2e"></span>
+            <span class="fm-dot" style="background:#28c840"></span>
+          </div>
+          <div class="fd-layout">
+            <div class="fd-left">
+              <div class="fd-av">HS</div>
+              <div>
+                <div class="fd-nm">Harshit Singh</div>
+                <div class="fd-rl">CEO</div>
+                <div class="fd-co">at Acme</div>
+              </div>
+              <div class="fd-btn">✉ Compose email</div>
+              <div class="fd-rows">
+                <div class="fd-r"><span class="fd-rk">Email</span><span class="fd-rv" style="font-size:9.5px">harshit.singh.work@…</span></div>
+                <div class="fd-r"><span class="fd-rk">Location</span><span class="fd-rv">Bengaluru, IN</span></div>
+                <div class="fd-r"><span class="fd-rk">Company</span><span class="fd-rv">Acme</span></div>
+                <div class="fd-r"><span class="fd-rk">Tags</span><span class="fd-rv" style="color:var(--text-3)">+ Add tag</span></div>
+              </div>
+            </div>
+            <div class="fd-right">
+              <div class="fd-sec">✦ Highlights</div>
+              <div class="fd-summary">Met at TechSparks 2025. Very interested in B2B SaaS tooling. Follow up in Q1 regarding seed participation. Prefers email over LinkedIn DMs.</div>
+              <div class="fd-pipeline">
+                <div class="fd-stage-row">
+                  <span class="fd-stage-lbl">Pipeline Stage</span>
+                  <span class="fd-stage-chip">Interested ▾</span>
+                </div>
+                <div class="fd-pbar"><div class="fd-pfill" style="width:60%;background:linear-gradient(90deg,#22c55e,#4ade80)"></div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:2px">
+                <div style="font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3)">Recent Activity</div>
+                <div style="font-size:10.5px;color:var(--text-2);display:flex;align-items:center;gap:6px">
+                  <span style="color:var(--accent)">✉</span> Email opened 2h ago · 3 link clicks
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="feat-text reveal d2">
+        <p class="feat-tag">Contact Intelligence</p>
+        <h3>Every relationship,<br>fully in context.</h3>
+        <p class="feat-desc">A living profile for every contact. Editable summaries, full interaction timelines, LinkedIn and email linked — everything you need before you send that message.</p>
+        <ul class="feat-list">
+          <li>Editable intelligence summary per contact</li>
+          <li>Full timeline of events, meetings, and notes</li>
+          <li>Pipeline stage with visual progress tracking</li>
+          <li>Tag and segment for targeted campaigns</li>
+        </ul>
+        <a href="#" class="feat-link">Explore contact profiles →</a>
+      </div>
+    </div>
+
+    <!-- FEATURE 2: Pipeline (flipped) -->
+    <div class="feat-row flip">
+      <div class="feat-text reveal d1">
+        <p class="feat-tag">Pipeline Management</p>
+        <h3>Visual. Drag.<br>Done.</h3>
+        <p class="feat-desc">Custom pipeline stages, drag-and-drop Kanban, bulk status updates, and a fast table view. Move relationships forward without losing track of a single one.</p>
+        <ul class="feat-list">
+          <li>5 built-in stages, fully customizable</li>
+          <li>Drag-and-drop Kanban board</li>
+          <li>Bulk status changes across selected contacts</li>
+          <li>Filter and sort by any field</li>
+        </ul>
+        <a href="#" class="feat-link">View pipeline features →</a>
+      </div>
+      <div class="feat-visual reveal d2">
+        <div class="feat-mock">
+          <div class="feat-mock-chrome">
+            <span class="fm-dot" style="background:#ff5f57"></span>
+            <span class="fm-dot" style="background:#febc2e"></span>
+            <span class="fm-dot" style="background:#28c840"></span>
+          </div>
+          <div class="fk-board">
+            <div class="fk-col">
+              <div class="fk-head"><span>New</span><span class="fk-cnt">3</span></div>
+              <div class="fk-card"><div class="fk-card-name">Harshit Singh</div><div class="fk-card-role">CEO at Acme</div></div>
+              <div class="fk-card"><div class="fk-card-name">Jigar Shah</div><div class="fk-card-role">ED – PE and VC</div></div>
+              <div class="fk-card"><div class="fk-card-name">Harsh Vardhan</div><div class="fk-card-role">VP – PM</div></div>
+            </div>
+            <div class="fk-col">
+              <div class="fk-head"><span>Contacted</span><span class="fk-cnt">2</span></div>
+              <div class="fk-card"><div class="fk-card-name">Kartavya Asthana</div><div class="fk-card-role">IB Associate</div></div>
+              <div class="fk-card"><div class="fk-card-name">Abhishek Jain</div><div class="fk-card-role">AVP</div></div>
+            </div>
+            <div class="fk-col">
+              <div class="fk-head"><span>Interested</span><span class="fk-cnt">2</span></div>
+              <div class="fk-card" style="border-color:rgba(34,197,94,.2);border-top-color:rgba(34,197,94,.35);background:rgba(34,197,94,.06)"><div class="fk-card-name" style="color:var(--accent)">Vaibhav Shah</div><div class="fk-card-role">VP at o3 Capital</div></div>
+              <div class="fk-card"><div class="fk-card-name">Ramarao Yechuri</div><div class="fk-card-role">MD CEO · Spark</div></div>
+            </div>
+            <div class="fk-col">
+              <div class="fk-head"><span>Replied</span><span class="fk-cnt">1</span></div>
+              <div class="fk-card"><div class="fk-card-name">Sumit Aggarwal</div><div class="fk-card-role">AVP</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEATURE 3: Email Outreach -->
+    <div class="feat-row">
+      <div class="feat-visual reveal d1">
+        <div class="feat-mock">
+          <div class="feat-mock-chrome">
+            <span class="fm-dot" style="background:#ff5f57"></span>
+            <span class="fm-dot" style="background:#febc2e"></span>
+            <span class="fm-dot" style="background:#28c840"></span>
+          </div>
+          <div class="fe-layout">
+            <div class="fe-compose">
+              <div class="fe-field"><span class="fe-key">To</span><span style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);padding:2px 9px;border-radius:5px;font-size:10.5px;color:var(--text)">vaibhav.shah@o3capital.com</span></div>
+              <div class="fe-field"><span class="fe-key">Subject</span><span style="color:var(--text)">Following up — Seed Round Discussion</span></div>
+              <div class="fe-field" style="border-bottom:1px solid rgba(255,255,255,.03)"><span class="fe-key">Template</span><span style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:2px 9px;border-radius:5px;font-size:10.5px;color:var(--text-2)">VC Cold Outreach ▾</span></div>
+              <div class="fe-body-area">
+                Hi <em>Vaibhav</em>,<br><br>
+                Following up on our TechSparks conversation. Given <em>o3 Capital</em>'s thesis on B2B SaaS, I believe there's a strong fit worth a 20-minute call.<br><br>
+                Would Thursday or Friday work for you?
+              </div>
+              <div class="fe-tracking">
+                <span class="fe-tdot"></span>
+                Email tracking enabled — opens &amp; clicks will be recorded
+              </div>
+              <div class="fe-footer">
+                <div class="fe-actions">
+                  <span class="fe-chip">📎 Attach</span>
+                  <span class="fe-chip">⏰ Schedule</span>
+                </div>
+                <button class="fe-send">Send →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="feat-text reveal d2">
+        <p class="feat-tag">Email Outreach</p>
+        <h3>Send smarter.<br>Know when they read it.</h3>
+        <p class="feat-desc">OAuth with Gmail and Outlook. Mail merge templates with one-click variable insertion. Email open and click tracking — surfaced per contact, per thread.</p>
+        <ul class="feat-list">
+          <li>Gmail &amp; Outlook connected via OAuth 2.0 PKCE</li>
+          <li>Mail merge templates with chip-based variables</li>
+          <li>Real-time open and link click tracking</li>
+          <li>Schedule sends for future delivery</li>
+        </ul>
+        <a href="#" class="feat-link">Explore email features →</a>
+      </div>
+    </div>
+
+  </div><!-- end container -->
+
+  <!-- SMALL FEATURE GRID -->
+  <div class="feat-grid-sm">
+    <div class="fg-item reveal d1">
+      <div class="fg-ico">📥</div>
+      <h4>LinkedIn Import</h4>
+      <p>Two-step CSV / XLSX import with column mapping and smart duplicate detection. Skip, merge, or import all.</p>
+    </div>
+    <div class="fg-item reveal d2">
+      <div class="fg-ico">⌘</div>
+      <h4>Command Palette</h4>
+      <p>Hit ⌘K to search contacts, open dialogs, and run any action — without ever touching the mouse.</p>
+    </div>
+    <div class="fg-item reveal d3">
+      <div class="fg-ico">🏷</div>
+      <h4>Tags &amp; Segments</h4>
+      <p>Color-coded tags for any contact. Build targeted lists for every campaign, fund cycle, or batch.</p>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     PRIVACY MANIFESTO
+══════════════════════════════════════════ -->
+<section id="privacy">
+  <div class="container">
+    <div class="privacy-inner">
+      <p class="s-label">Privacy First</p>
+      <h2>Your data.<br>Your machine.<br>Full stop.</h2>
+      <p>
+        No cloud sync. No telemetry. No vendor lock-in. The entire database is encrypted with SQLCipher AES-256. Your master key lives in the OS Keychain — not our servers.
+      </p>
+      <div class="privacy-chips">
+        <span class="priv-chip">SQLCipher AES-256</span>
+        <span class="priv-chip">OS Keychain integration</span>
+        <span class="priv-chip">AES-256-GCM field encryption</span>
+        <span class="priv-chip">Zero telemetry</span>
+        <span class="priv-chip">Offline-first</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     PRICING
+══════════════════════════════════════════ -->
+<section id="pricing">
+  <div class="container">
+    <div class="pricing-head reveal">
+      <p class="s-label">Pricing</p>
+      <h2>Start free.<br>Scale when you're ready.</h2>
+      <p>No subscription required to manage your relationships. Pay only when you need commercial-grade tracking infrastructure.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="p-card glass reveal d1">
+        <p class="p-tier">Personal</p>
+        <div class="price-num">$0<sub>/mo</sub></div>
+        <p class="p-desc">Free forever. Open source. Fully featured for individual use.</p>
+        <div class="p-features">
+          <div class="p-feat">Unlimited contacts</div>
+          <div class="p-feat">Gmail &amp; Outlook OAuth</div>
+          <div class="p-feat">Kanban &amp; table views</div>
+          <div class="p-feat">CSV / XLSX import</div>
+          <div class="p-feat">Email templates &amp; mail merge</div>
+          <div class="p-feat">AES-256 local encryption</div>
+          <div class="p-feat off">Tracking Relay</div>
+          <div class="p-feat off">Priority support</div>
+        </div>
+        <a href="https://github.com/Gitter09/outreach-os/releases" class="p-btn btn btn-ghost">
+          Download Free
+        </a>
+      </div>
+
+      <div class="p-card glass hot reveal d2">
+        <p class="p-tier">Pro</p>
+        <div class="price-num">$9<sub>/mo</sub></div>
+        <p class="p-desc">Commercial-grade open &amp; click tracking. Powered by Cloudflare.</p>
+        <div class="p-features">
+          <div class="p-feat">Everything in Personal</div>
+          <div class="p-feat">Email open tracking</div>
+          <div class="p-feat">Link click tracking</div>
+          <div class="p-feat">Cloudflare relay infrastructure</div>
+          <div class="p-feat">Per-contact analytics</div>
+          <div class="p-feat">Priority support</div>
+        </div>
+        <a href="#" class="p-btn btn btn-primary">
+          Get Pro &nbsp;→
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     CTA
+══════════════════════════════════════════ -->
+<section id="cta">
+  <div class="container">
+    <div class="cta-inner reveal">
+      <p class="s-label">Get started today</p>
+      <h2>Your relationships deserve better infrastructure.</h2>
+      <p>Free to download. No account required. No cloud, no telemetry — your data lives on your machine, the way it was always meant to be.</p>
+      <div class="cta-btns">
+        <a href="https://github.com/Gitter09/outreach-os/releases" class="btn btn-primary btn-lg">
+          ↓&nbsp;&nbsp;Download for macOS
+        </a>
+        <a href="https://github.com/Gitter09/outreach-os" class="btn btn-ghost btn-lg" target="_blank">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <div class="footer-logo">
+          <div class="footer-logo-mark">O</div>
+          <span class="footer-logo-name">OutreachOS</span>
+        </div>
+        <p class="footer-copy">© 2026 OutreachOS · All Rights Reserved · Proprietary License</p>
+      </div>
+      <nav class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank">Docs</a>
+        <a href="https://github.com/Gitter09/outreach-os" target="_blank">GitHub</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script src="js/starfield.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

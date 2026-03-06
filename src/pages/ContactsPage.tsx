@@ -184,7 +184,7 @@ export function ContactsPage() {
             try {
                 await invoke<string>("fix_orphan_contacts");
             } catch (err) {
-                console.error("[App] Failed to fix orphans:", err);
+                handleError(err, "Failed to initialize database");
             }
             fetchContacts();
 
@@ -202,7 +202,7 @@ export function ContactsPage() {
                     handleError(`Email token expired for: ${expired.join(", ")}. Go to Settings → Email to reconnect.`);
                 }
             } catch (err) {
-                console.error("[App] Email sync on launch failed:", err);
+                handleError(err, "Email sync failed on launch");
             }
         };
         init();

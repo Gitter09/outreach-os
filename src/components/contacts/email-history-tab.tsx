@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Contact, EmailMessage } from "@/types/crm";
+import { useErrors } from "@/hooks/use-errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Mail, ArrowUpRight, ArrowDownLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
@@ -46,6 +47,7 @@ function EmailMessageItem({ email, contact }: { email: EmailMessage, contact: Co
 export function EmailHistoryTab({ contact }: EmailHistoryTabProps) {
     const [emails, setEmails] = useState<EmailMessage[]>([]);
     const [loading, setLoading] = useState(true);
+    const { handleError } = useErrors();
 
     useEffect(() => {
         const fetchEmails = async () => {
@@ -54,7 +56,7 @@ export function EmailHistoryTab({ contact }: EmailHistoryTabProps) {
                 const data = await invoke<EmailMessage[]>("get_emails_for_contact", { contactId: contact.id });
                 setEmails(data);
             } catch (error) {
-                console.error("Failed to fetch emails:", error);
+                handleError(error, "Failed to fetch emails");
             } finally {
                 setLoading(false);
             }

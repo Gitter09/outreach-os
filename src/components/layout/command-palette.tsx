@@ -10,13 +10,13 @@ import {
 } from "@/components/ui/command";
 import {
     Users,
-    Zap,
     Mail,
     Settings,
     FileSpreadsheet,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { Contact } from "@/types/crm";
+import { useErrors } from "@/hooks/use-errors";
 
 interface CommandPaletteProps {
     open: boolean;
@@ -28,30 +28,20 @@ interface CommandPaletteProps {
     onOpenSettings?: () => void;
 }
 
-export function CommandPalette({ open, onOpenChange, onContactsChanged, onOpenImport, onOpenAddContact, onSelectContact, onOpenSettings }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, onOpenImport, onOpenAddContact, onSelectContact, onOpenSettings }: CommandPaletteProps) {
     const [contacts, setContacts] = useState<Contact[]>([]);
+    const { handleError } = useErrors();
 
     useEffect(() => {
         if (open) {
             invoke<Contact[]>("get_contacts")
                 .then(setContacts)
-                .catch(console.error);
+                .catch((err) => handleError(err, "Failed to load contacts"));
         }
-    }, [open]);
+    }, [open, handleError]);
 
-    const handleAction = async (action: string) => {
-        console.log("Triggering action:", action);
-        if (action === "scrape_clipboard") {
-            try {
-                const result = await invoke("scrape_clipboard");
-                console.log("Scrape completed, contact ID:", result);
-                onOpenChange(false);
-                onContactsChanged?.();
-            } catch (error) {
-                console.error("Scrape failed:", error);
-                alert(`Scrape failed: ${error}`);
-            }
-        } else if (action === "open_import") {
+    const handleAction = (action: string) => {
+        if (action === "open_import") {
             onOpenChange(false);
             onOpenImport?.();
         } else if (action === "add_contact") {
@@ -76,14 +66,6 @@ export function CommandPalette({ open, onOpenChange, onContactsChanged, onOpenIm
             <CommandList>
                 <CommandEmpty>No results found.</CommandEmpty>
                 <CommandGroup heading="Intelligence">
-                    <CommandItem
-                        onSelect={() => handleAction("scrape_clipboard")}
-                        onPointerDown={(e) => e.preventDefault()}
-                    >
-                        <Zap className="mr-2 h-4 w-4 text-yellow-500" />
-                        <span>Clipboard Intelligence</span>
-                        <CommandShortcut>Magic Paste</CommandShortcut>
-                    </CommandItem>
                     <CommandItem
                         onSelect={() => handleAction("add_contact")}
                         onPointerDown={(e) => e.preventDefault()}

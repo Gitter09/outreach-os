@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useErrors } from "@/hooks/use-errors";
 import { useParams, useNavigate } from "react-router-dom";
 import { EmailSettingsTab } from "@/components/settings/email-settings-tab";
 import { SecuritySettingsTab } from "@/components/settings/security-settings-tab";
@@ -34,6 +35,7 @@ export function SettingsPage() {
     const activeTab = (tab as SettingsTab) || "appearance";
 
     const { settings, loading, updateSetting } = useSettings();
+    const { handleError } = useErrors();
 
     // Redirect /settings to /settings/ai
     useEffect(() => {
@@ -161,8 +163,7 @@ export function SettingsPage() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Export failed:", error);
-            alert("Failed to export data");
+            handleError(error, "Failed to export data");
         }
     };
 
@@ -175,8 +176,7 @@ export function SettingsPage() {
             alert("Database cleared successfully. The app will now reload.");
             window.location.reload();
         } catch (error) {
-            console.error("Clear failed:", error);
-            alert("Failed to clear database");
+            handleError(error, "Failed to clear database");
         }
     };
 

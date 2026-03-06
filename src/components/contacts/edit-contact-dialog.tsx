@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useErrors } from "@/hooks/use-errors";
 import {
     Dialog,
     DialogContent,
@@ -41,6 +42,7 @@ interface EditContactDialogProps {
 
 export function EditContactDialog({ contact, open, onOpenChange, onContactUpdated }: EditContactDialogProps) {
     const [loading, setLoading] = useState(false);
+    const { handleError } = useErrors();
 
     // Form state
     const [firstName, setFirstName] = useState(contact.first_name);
@@ -98,7 +100,7 @@ export function EditContactDialog({ contact, open, onOpenChange, onContactUpdate
             onContactUpdated();
             onOpenChange(false);
         } catch (error) {
-            console.error("Failed to update contact:", error);
+            handleError(error, "Failed to update contact");
         } finally {
             setLoading(false);
             setIsConfirmSaveOpen(false);

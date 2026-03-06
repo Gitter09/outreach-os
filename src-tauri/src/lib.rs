@@ -561,13 +561,12 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, AppErro
 }
 
 #[tauri::command]
-async fn delete_contact(db: tauri::State<'_, Db>, id: String) -> Result<(), String> {
+async fn delete_contact(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
     let pool = db.pool();
     sqlx::query("DELETE FROM contacts WHERE id = ?")
         .bind(&id)
         .execute(pool)
-        .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        .await?;
     Ok(())
 }
 
@@ -1130,9 +1129,9 @@ async fn import_contacts(
 }
 
 #[tauri::command]
-async fn delete_contacts_bulk(db: tauri::State<'_, Db>, ids: Vec<String>) -> Result<u64, String> {
+async fn delete_contacts_bulk(db: tauri::State<'_, Db>, ids: Vec<String>) -> Result<u64, AppError> {
     let pool = db.pool();
-    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    let mut tx = pool.begin().await?;
 
     let mut deleted_count = 0;
 
@@ -1140,12 +1139,11 @@ async fn delete_contacts_bulk(db: tauri::State<'_, Db>, ids: Vec<String>) -> Res
         let result = sqlx::query("DELETE FROM contacts WHERE id = ?")
             .bind(id)
             .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
         deleted_count += result.rows_affected();
     }
 
-    tx.commit().await.map_err(|e| e.to_string())?;
+    tx.commit().await?;
 
     Ok(deleted_count)
 }
@@ -1194,7 +1192,7 @@ async fn create_tag(
     db: tauri::State<'_, Db>,
     name: String,
     color: String,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let pool = db.pool();
     let id = uuid::Uuid::new_v4().to_string();
     sqlx::query("INSERT INTO tags (id, name, color) VALUES (?, ?, ?)")
@@ -1202,8 +1200,7 @@ async fn create_tag(
         .bind(name)
         .bind(color)
         .execute(pool)
-        .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        .await?;
     Ok(id)
 }
 
@@ -1213,26 +1210,24 @@ async fn update_tag(
     id: String,
     name: String,
     color: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let pool = db.pool();
     sqlx::query("UPDATE tags SET name = ?, color = ? WHERE id = ?")
         .bind(name)
         .bind(color)
         .bind(id)
         .execute(pool)
-        .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        .await?;
     Ok(())
 }
 
 #[tauri::command]
-async fn delete_tag(db: tauri::State<'_, Db>, id: String) -> Result<(), String> {
+async fn delete_tag(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
     let pool = db.pool();
     sqlx::query("DELETE FROM tags WHERE id = ?")
         .bind(id)
         .execute(pool)
-        .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        .await?;
     Ok(())
 }
 

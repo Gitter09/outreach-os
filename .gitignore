@@ -46,3 +46,5 @@ release_notes/
 # other
 .agent
 .agents
+.claude
+.playwright-mcp
