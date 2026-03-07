@@ -1844,6 +1844,8 @@ h2 {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  --mx: 50%;
+  --my: 50%;
 }
 
 .p-card.hot::before {
@@ -1866,9 +1868,13 @@ h2 {
   position: absolute;
   inset: 1px;
   border-radius: var(--r-xl);
-  background: #060912;
-  /* Strengthened background for better contrast */
+  background:
+    radial-gradient(800px circle at var(--mx) var(--my),
+      rgba(34, 197, 94, 0.14),
+      transparent 40%),
+    #060912;
   z-index: -1;
+  transition: opacity 0.4s ease;
 }
 
 .p-card.hot>* {
@@ -2315,4 +2321,48 @@ footer {
 
 .activity-shimmer {
   animation: activityShimmer 0.75s ease-out forwards;
+}
+
+/* ── TYPEWRITER ── */
+#fd-cursor {
+  display: inline;
+  font-weight: 300;
+  color: var(--accent);
+  margin-left: 1px;
+  animation: cursorBlink 0.53s step-end infinite;
+}
+
+@keyframes cursorBlink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+#fd-summary-text {
+  min-height: 4.2em;
+}
+
+/* ── DECRYPT CHIP REVEAL ── */
+.decrypt-chip {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.decrypt-chip.decrypt-active {
+  visibility: visible;
+}
+
+.decrypt-chip.decrypt-done {
+  opacity: 1;
+  visibility: visible;
+  font-variant-numeric: normal;
 }
