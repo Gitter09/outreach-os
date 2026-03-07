@@ -149,6 +149,58 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
+  /* ── PANE ENTRY ANIMATIONS ── */
+  function onPaneEnter(id) {
+    if (id === 'pipeline') {
+      const sarahCard = document.getElementById('sarah-card');
+      if (!sarahCard) return;
+      sarahCard.classList.remove('card-pulse');
+      void sarahCard.offsetWidth;
+      sarahCard.classList.add('card-pulse');
+      setTimeout(() => sarahCard.classList.remove('card-pulse'), 520);
+    }
+
+    if (id === 'outreach') {
+      triggerOutreachEntry();
+    }
+
+    if (id === 'intel') {
+      triggerIntelEntry();
+    }
+  }
+
+  function triggerOutreachEntry() {
+    const composeBody = document.querySelector('#pane-outreach .compose-body');
+    if (composeBody) {
+      const vars = composeBody.querySelectorAll('em');
+      vars.forEach((v, i) => {
+        v.classList.remove('var-pulse');
+        void v.offsetWidth;
+        setTimeout(() => {
+          v.classList.add('var-pulse');
+          setTimeout(() => v.classList.remove('var-pulse'), 720);
+        }, i * 160);
+      });
+    }
+
+    const trackingRow = document.querySelector('#pane-outreach .tracking-row');
+    if (trackingRow) {
+      trackingRow.classList.remove('tracking-visible');
+      setTimeout(() => {
+        trackingRow.classList.add('tracking-visible');
+      }, 420);
+    }
+  }
+
+  function triggerIntelEntry() {
+    const activityLine = document.getElementById('activity-line');
+    if (!activityLine) return;
+    activityLine.classList.remove('activity-shimmer');
+    void activityLine.offsetWidth;
+    activityLine.classList.add('activity-shimmer');
+    setTimeout(() => activityLine.classList.remove('activity-shimmer'), 780);
+  }
+
   /* ── HERO INTERACTIVE TABS ── */
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
@@ -178,6 +230,8 @@
       next.style.transition = 'opacity .28s ease, transform .28s ease';
       next.style.opacity = '1';
       next.style.transform = 'translateY(0)';
+
+      onPaneEnter(id);
 
       setTimeout(() => {
         next.style.transition = '';
@@ -217,6 +271,84 @@
   }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 
   revealEls.forEach(el => observer.observe(el));
+
+
+  /* ── CLIP-PATH HEADLINE REVEALS ── */
+  (function () {
+    const HEADLINE_SELECTORS = [
+      '.feat-header h2',
+      '#privacy .privacy-inner h2',
+      '#pricing .pricing-head h2',
+      '#cta .cta-inner h2',
+      '.feat-text h3',
+    ];
+
+    function wrapHeadline(el) {
+      if (el.parentElement.classList.contains('clip-reveal-outer')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'clip-reveal-outer clip-pending';
+      el.parentNode.insertBefore(wrapper, el);
+      wrapper.appendChild(el);
+    }
+
+    const allHeadlines = [];
+
+    HEADLINE_SELECTORS.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        wrapHeadline(el);
+        allHeadlines.push(el.parentElement);
+      });
+    });
+
+    function revealClip(wrapper, delay = 0) {
+      setTimeout(() => {
+        wrapper.style.transition = 'clip-path 0.72s cubic-bezier(0.16, 1, 0.3, 1)';
+        wrapper.classList.remove('clip-pending');
+        wrapper.classList.add('clip-done');
+        setTimeout(() => {
+          wrapper.style.transition = '';
+        }, 730);
+      }, delay);
+    }
+
+    const clipObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          revealClip(entry.target);
+          clipObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    allHeadlines.forEach(wrapper => clipObserver.observe(wrapper));
+
+    const h1line1 = document.querySelector('.h1-line1');
+    const h1line2 = document.querySelector('.h1-line2');
+
+    function wrapHeroSpan(span) {
+      if (!span) return null;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'clip-reveal-outer clip-pending';
+      wrapper.style.display = 'inline-block';
+      span.parentNode.insertBefore(wrapper, span);
+      wrapper.appendChild(span);
+      return wrapper;
+    }
+
+    const w1 = wrapHeroSpan(h1line1);
+    const w2 = wrapHeroSpan(h1line2);
+
+    function fireHeroReveal() {
+      if (w1) revealClip(w1, 120);
+      if (w2) revealClip(w2, 300);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fireHeroReveal);
+    } else {
+      fireHeroReveal();
+    }
+  })();
 
 
   /* ── AUTO cycle tabs every 4s if user hasn't interacted ── */
