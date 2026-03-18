@@ -4,11 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OutreachOS — The Private CRM for Serious Networkers</title>
+  <title>Personal Email CRM — Built by Harshit Singh</title>
   <meta name="description"
     content="Privacy-first, offline-capable CRM for founders, VCs, and professional networkers. Your data never leaves your machine. Built with Tauri 2 + Rust.">
-  <meta property="og:title" content="OutreachOS — The Private CRM for Serious Networkers">
-  <meta property="og:description" content="Your relationships. Your machine. No cloud, no telemetry, no compromise.">
+  <meta property="og:title" content="Personal Email CRM — Built by Harshit Singh">
+  <meta property="og:description" content="I built my own CRM instead of paying for one. Free, local-first, open source.">
   <meta name="theme-color" content="#03030a">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -28,7 +28,6 @@
 
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
-      <li><a href="#pricing">Pricing</a></li>
       <li><a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank">Docs</a></li>
       <li><a href="https://github.com/Gitter09/outreach-os" target="_blank">GitHub</a></li>
     </ul>
@@ -53,27 +52,16 @@
 
     <!-- headline -->
     <div class="hero-content">
-      <div class="hero-badge">
-        <span class="badge-dot"></span>
-        <span class="badge-text">v0.1.3 — Now Available for macOS &amp; Windows</span>
-      </div>
 
-      <h1>
-        <span class="h1-line1">Relationship OS</span>
-        <span class="h1-line-sub">for serious <span class="h1-line2">operators.</span></span>
-      </h1>
+      <h1>I built my own CRM<br>instead of paying for one.</h1>
 
       <p class="hero-sub">
-        Privacy-first, offline-capable CRM built for founders, VCs, and professional networkers. Your data never leaves
-        your machine — encrypted, always.
+        Streak's free trial expired. I refused to pay ₹3000/month for features I knew I could build. So I built them. This is that product.
       </p>
 
       <div class="hero-ctas">
         <a href="https://github.com/Gitter09/outreach-os/releases" class="btn btn-primary btn-lg">
-          ↓&nbsp;&nbsp;Download for macOS
-        </a>
-        <a href="#features" class="btn btn-ghost btn-lg">
-          See how it works&nbsp;&nbsp;→
+          ↓&nbsp;&nbsp;Download Free
         </a>
       </div>
     </div>
@@ -416,17 +404,31 @@
 
 
   <!-- ══════════════════════════════════════════
+     WHY I BUILT THIS
+══════════════════════════════════════════ -->
+  <section id="why">
+    <div class="container">
+      <div class="why-inner reveal">
+        <h2>Why I built this.</h2>
+        <p>Most CRM tools are built for sales teams. I needed something personal — a way to manage the relationships that matter in my actual life and work. Streak was the closest thing to what I wanted, but the free tier expired and the paid tier was ₹3000/month for features I knew I could build myself.</p>
+        <p>So I built it instead. Local-first, no server, no recurring cost. The data lives on your machine. I own the product decisions. And now I'm shipping it publicly.</p>
+        <p>This isn't a startup. It's a tool I built for myself that might be useful to you.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
      TRUST / TECH STRIP
 ══════════════════════════════════════════ -->
   <div id="trust">
     <div class="container">
       <div class="trust-inner">
         <span class="trust-label">Built with</span>
-        <span class="tech-pill"><span class="ico">🦀</span> Rust + Tauri 2</span>
-        <span class="tech-pill"><span class="ico">⚛</span> React 19</span>
-        <span class="tech-pill"><span class="ico">🔐</span> SQLCipher AES-256</span>
-        <span class="tech-pill"><span class="ico">✉</span> Gmail &amp; Outlook OAuth</span>
-        <span class="tech-pill"><span class="ico">💻</span> macOS · Windows</span>
+        <span class="tech-pill">Vite</span>
+        <span class="tech-pill">React</span>
+        <span class="tech-pill">SQLite</span>
+        <span class="tech-pill">Agentic AI Development</span>
       </div>
     </div>
   </div>
@@ -515,7 +517,7 @@
             <li>Pipeline stage with visual progress tracking</li>
             <li>Tag and segment for targeted campaigns</li>
           </ul>
-          <a href="#" class="feat-link">Explore contact profiles →</a>
+
         </div>
       </div>
 
@@ -532,7 +534,7 @@
             <li>Bulk status changes across selected contacts</li>
             <li>Filter and sort by any field</li>
           </ul>
-          <a href="#" class="feat-link">View pipeline features →</a>
+
         </div>
         <div class="feat-visual">
           <div class="feat-mock">
@@ -644,7 +646,7 @@
             <li>Real-time open and link click tracking</li>
             <li>Schedule sends for future delivery</li>
           </ul>
-          <a href="#" class="feat-link">Explore email features →</a>
+
         </div>
       </div>
 
@@ -669,6 +671,35 @@
       </div>
     </div>
 
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+     KEY DECISIONS
+══════════════════════════════════════════ -->
+  <section id="decisions">
+    <div class="container">
+      <div class="decisions-head reveal">
+        <h2>Decisions I made while building this.</h2>
+      </div>
+      <div class="decisions-grid">
+        <div class="fg-item reveal d1">
+          <p class="fg-label">Architecture</p>
+          <h4>Local-first, always.</h4>
+          <p>No server means no recurring cost, no data leaving your machine, and no dependency on my uptime. The tradeoff: no sync across devices in v0.1. Worth it.</p>
+        </div>
+        <div class="fg-item reveal d2">
+          <p class="fg-label">Scope</p>
+          <h4>Deferred the AI layer.</h4>
+          <p>I had planned AI-assisted email drafting for v0.1. I cut it deliberately to ship faster. A product that ships without AI beats a product that never ships with it.</p>
+        </div>
+        <div class="fg-item reveal d3">
+          <p class="fg-label">Pricing</p>
+          <h4>Free, not freemium.</h4>
+          <p>There's no $9 tier. This is a personal project I'm sharing publicly. If it grows into something more, I'll revisit — but not before doing the market research to justify it.</p>
+        </div>
+      </div>
+    </div>
   </section>
 
 
@@ -702,62 +733,13 @@
 ══════════════════════════════════════════ -->
   <section id="pricing">
     <div class="container">
-      <div class="pricing-head reveal">
+      <div class="pricing-head reveal" style="max-width:640px; margin: 0 auto;">
         <p class="s-label">Pricing</p>
-        <h2>Start free.<br>Scale when you're ready.</h2>
-        <p>No subscription required to manage your relationships. Pay only when you need commercial-grade tracking
-          infrastructure.</p>
-      </div>
-
-      <div class="pricing-grid">
-        <div class="p-card glass reveal d1">
-          <p class="p-tier">Personal</p>
-          <div class="price-num">$0<sub>/mo</sub></div>
-          <p class="p-desc">Free forever. Open source. Fully featured for individual use.</p>
-          <div class="p-features">
-            <div class="p-feat">Unlimited contacts</div>
-            <div class="p-feat">Gmail &amp; Outlook OAuth</div>
-            <div class="p-feat">Kanban &amp; table views</div>
-            <div class="p-feat">CSV / XLSX import</div>
-            <div class="p-feat">Email templates &amp; mail merge</div>
-            <div class="p-feat">AES-256 local encryption</div>
-          </div>
-          <a href="https://github.com/Gitter09/outreach-os/releases" class="p-btn btn btn-ghost">
-            Download Free
-          </a>
-        </div>
-
-        <div class="p-card glass hot reveal d2">
-          <p class="p-tier">Pro</p>
-          <div class="price-num">$9<sub>/mo</sub></div>
-          <p class="p-desc">Commercial-grade open &amp; click tracking. Powered by Cloudflare.</p>
-          <div class="p-features">
-            <div class="p-feat">Everything in Personal</div>
-            <div class="p-feat">Email open tracking</div>
-            <div class="p-feat">Link click tracking</div>
-            <div class="p-feat">Cloudflare relay infrastructure</div>
-            <div class="p-feat">Per-contact analytics</div>
-            <div class="p-feat">Priority support</div>
-          </div>
-          <a href="#" class="p-btn btn btn-primary">
-            Get Pro &nbsp;→
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-  <section id="cta">
-    <div class="container">
-      <div class="cta-inner reveal">
-        <p class="s-label">Get started today</p>
-        <h2>Your relationships deserve better infrastructure.</h2>
-        <p>Free to download. No account required. No cloud, no telemetry — your data lives on your machine, the way it
-          was always meant to be.</p>
-        <div class="cta-btns">
+        <h2>Free. No catch.</h2>
+        <p>This is a personal project. I built it for myself, open-sourced it, and you can use it for free. There's no paid tier, no subscription, no server sending your data anywhere. It runs on your machine.</p>
+        <div class="cta-btns" style="margin-top:32px">
           <a href="https://github.com/Gitter09/outreach-os/releases" class="btn btn-primary btn-lg">
-            ↓&nbsp;&nbsp;Download for macOS
+            ↓&nbsp;&nbsp;Download Free
           </a>
           <a href="https://github.com/Gitter09/outreach-os" class="btn btn-ghost btn-lg" target="_blank">
             View on GitHub
@@ -766,6 +748,7 @@
       </div>
     </div>
   </section>
+
 
 
   <!-- ══════════════════════════════════════════
@@ -783,7 +766,6 @@
         </div>
         <nav class="footer-links">
           <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
           <a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank">Docs</a>
           <a href="https://github.com/Gitter09/outreach-os" target="_blank">GitHub</a>
         </nav>

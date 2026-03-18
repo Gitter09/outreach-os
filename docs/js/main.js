@@ -365,16 +365,7 @@
     switchTab(tabOrder[tabIdx]);
   }, 4200);
 
-  const proCard = document.querySelector('.p-card.hot');
-  if (proCard) {
-    proCard.addEventListener('mousemove', e => {
-      const rect = proCard.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      proCard.style.setProperty('--mx', `${x}%`);
-      proCard.style.setProperty('--my', `${y}%`);
-    });
-  }
+
 
 
   /* ── TYPEWRITER — CONTACT INTELLIGENCE MOCKUP ── */
