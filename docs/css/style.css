@@ -552,7 +552,8 @@ h2 {
   flex-wrap: wrap;
 }
 
-.hero-ctas .btn-lg {
+.hero-ctas .btn-lg,
+.cta-btns .btn-lg {
   border-radius: 6px;
 }
 
@@ -2434,22 +2435,63 @@ footer {
     padding: 52px 0;
   }
 
-  .feat-row .feat-visual {
+  .feat-row .feat-visual,
+  .feat-row.flip .feat-visual {
     order: -1;
   }
 
-  .feat-row .feat-text {
+  .feat-row .feat-text,
+  .feat-row.flip .feat-text {
     order: 1;
+  }
+
+  /* Stack feat-text-layout to single column: heading above, subtext below */
+  .feat-text-layout {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .ftl-right {
+    margin-top: 0;
   }
 
   .feat-visual {
     overflow: hidden;
-    -webkit-mask-image: linear-gradient(to right, black 55%, transparent 100%),
-                         linear-gradient(to bottom, black 75%, transparent 100%);
-    -webkit-mask-composite: destination-in;
-    mask-image: linear-gradient(to right, black 55%, transparent 100%),
-                linear-gradient(to bottom, black 75%, transparent 100%);
-    mask-composite: intersect;
+    -webkit-mask-image: linear-gradient(to bottom, black 72%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 72%, transparent 100%);
+  }
+
+  /* ── CONTACT INTELLIGENCE: Linear-style mobile crop ── */
+  .fd-sidebar    { display: none !important; }
+  .fd-col-props  { display: none !important; }
+
+  /* ── PIPELINE: Linear-style mobile crop — Interview column only ── */
+  .fk-board .fk-col:not(:nth-child(3)) { display: none !important; }
+  .fk-board .fk-col:nth-child(3) { flex: 1 !important; min-width: 0 !important; }
+  .fk-board { padding: 16px !important; overflow-x: hidden !important; height: 300px !important; }
+
+  /* ── EMAIL OUTREACH: Linear-style mobile crop — thread pane only ── */
+  .fe-inbox-sidebar { display: none !important; }
+  .fe-thread-pane { flex: 1 !important; min-width: 0 !important; }
+  .fe-layout { height: 300px !important; }
+
+  .fd-layout {
+    min-height: 0;
+    height: 300px;
+  }
+
+  .fd-right {
+    display: block !important;
+    padding: 20px !important;
+  }
+
+  .fd-col-timeline {
+    background: none !important;
+    border-left: none !important;
+    padding-left: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
   }
 
   .feat-hero-intro {

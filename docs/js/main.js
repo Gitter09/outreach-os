@@ -278,6 +278,8 @@
 
     function runTypewriter() {
       if (hasRun) return;
+      // Skip on mobile — element is hidden and animation was designed for desktop
+      if (window.matchMedia('(max-width: 768px)').matches) return;
       hasRun = true;
 
       // Clear existing text

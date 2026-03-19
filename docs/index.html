@@ -457,7 +457,7 @@
             </div>
             <!-- Mock Content 1 -->
             <div class="fd-layout">
-              <div class="fd-left">
+              <div class="fd-left fd-sidebar">
                 <div class="fd-av">SJ</div>
                 <div>
                   <div class="fd-nm">Sarah Jones</div>
@@ -496,7 +496,7 @@
               </div>
               <div class="fd-right" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 32px;">
                 <!-- Column 1: Core Intelligence -->
-                <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div class="fd-col-props" style="display: flex; flex-direction: column; gap: 24px;">
                   <div>
                     <div class="fd-sec">✦ Highlights</div>
                     <div id="fd-summary-text" class="fd-summary">Connected via alumni network. She manages university
@@ -564,7 +564,7 @@
                 </div>
 
                 <!-- Column 2: Interaction Thread (Linear style) -->
-                <div
+                <div class="fd-col-timeline"
                   style="background: rgba(255,255,255,0.02); border-left: 1px solid rgba(255,255,255,0.04); padding-left: 32px; display: flex; flex-direction: column; gap: 20px;">
                   <div class="fd-sec" style="margin-bottom: 0px;">Timeline</div>
 
@@ -901,7 +901,7 @@
             </div>
             <div class="fe-layout" style="display: flex; height: 100%;">
               <!-- Side Inbox Pane -->
-              <div
+              <div class="fe-inbox-sidebar"
                 style="width: 280px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; background: rgba(0,0,0,0.2);">
                 <div
                   style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; font-weight: 500; font-family: 'Space Grotesk', sans-serif;">
@@ -967,7 +967,7 @@
               </div>
 
               <!-- Right Pane Wrapper -->
-              <div style="flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.1);">
+              <div class="fe-thread-pane" style="flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.1);">
                 <!-- Reading Pane -->
                 <div
                   style="flex: 1; padding: 24px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-y: auto;">
