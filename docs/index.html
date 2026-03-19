@@ -4,12 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal Email CRM — Built by Harshit Singh</title>
+  <title>OutreachOS - Personal Email CRM</title>
   <meta name="description"
     content="Privacy-first, offline-capable CRM for founders, VCs, and professional networkers. Your data never leaves your machine. Built with Tauri 2 + Rust.">
-  <meta property="og:title" content="Personal Email CRM — Built by Harshit Singh">
-  <meta property="og:description" content="I built my own CRM instead of paying for one. Free, local-first, open source.">
+  <meta property="og:title" content="OutreachOS - Personal Email CRM">
+  <meta property="og:description"
+    content="I built my own CRM instead of paying for one. Free, local-first, open source.">
   <meta name="theme-color" content="#000000">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="512x512" href="favicon.svg">
+  <link rel="apple-touch-icon" href="favicon.svg">
   <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -20,7 +24,8 @@
   <header class="site-header" id="site-header">
     <nav class="navbar" aria-label="Main Navigation">
       <div class="navbar__toggle-wrapper">
-        <button class="navbar__toggle" id="navbar-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+        <button class="navbar__toggle" id="navbar-toggle" aria-label="Open menu" aria-expanded="false"
+          aria-controls="mobile-nav">
           <span class="toggle-line top"></span>
           <span class="toggle-line middle"></span>
           <span class="toggle-line bottom"></span>
@@ -30,9 +35,15 @@
       <a href="#" class="navbar__brand" aria-label="OutreachOS Home">
         <div class="navbar__logo">
           <svg width="22" height="22" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M300 120C344.057 120 384.415 135.83 415.702 162.11L353.568 236.159C339.829 219.991 320.9 210 300 210C258.026 210 224 250.294 224 300C224 349.706 258.026 390 300 390C341.974 390 376 349.706 376 300C376 283.896 372.427 268.78 366.17 255.702L449.59 199.857C468.794 228.488 480 262.935 480 300C480 399.411 399.411 480 300 480C200.589 480 120 399.411 120 300C120 200.589 200.589 120 300 120Z" fill="#000000"/>
-            <path d="M456.124 46.0815C483.732 58.1553 507.867 76.9668 526.317 100.791C544.766 124.615 556.939 152.69 561.72 182.441L530.264 187.496C526.329 163.011 516.31 139.905 501.127 120.298C485.943 100.691 466.08 85.2088 443.358 75.2721L456.124 46.0815Z" fill="#000000"/>
-            <path d="M430.086 102.473C449.258 110.858 466.019 123.921 478.831 140.466C491.643 157.011 500.097 176.507 503.417 197.167L476.36 201.515C473.768 185.384 467.168 170.162 457.164 157.244C447.161 144.327 434.075 134.127 419.106 127.581L430.086 102.473Z" fill="#000000"/>
+            <path
+              d="M300 120C344.057 120 384.415 135.83 415.702 162.11L353.568 236.159C339.829 219.991 320.9 210 300 210C258.026 210 224 250.294 224 300C224 349.706 258.026 390 300 390C341.974 390 376 349.706 376 300C376 283.896 372.427 268.78 366.17 255.702L449.59 199.857C468.794 228.488 480 262.935 480 300C480 399.411 399.411 480 300 480C200.589 480 120 399.411 120 300C120 200.589 200.589 120 300 120Z"
+              fill="#000000" />
+            <path
+              d="M456.124 46.0815C483.732 58.1553 507.867 76.9668 526.317 100.791C544.766 124.615 556.939 152.69 561.72 182.441L530.264 187.496C526.329 163.011 516.31 139.905 501.127 120.298C485.943 100.691 466.08 85.2088 443.358 75.2721L456.124 46.0815Z"
+              fill="#000000" />
+            <path
+              d="M430.086 102.473C449.258 110.858 466.019 123.921 478.831 140.466C491.643 157.011 500.097 176.507 503.417 197.167L476.36 201.515C473.768 185.384 467.168 170.162 457.164 157.244C447.161 144.327 434.075 134.127 419.106 127.581L430.086 102.473Z"
+              fill="#000000" />
           </svg>
         </div>
         <span class="navbar__title">OutreachOS</span>
@@ -41,8 +52,10 @@
       <nav class="navbar__nav" aria-label="Desktop Navigation">
         <ul class="navbar__nav-links">
           <li><a href="#features" class="nav-link">Features</a></li>
-          <li><a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank" rel="noopener noreferrer" class="nav-link">Docs</a></li>
-          <li><a href="https://github.com/Gitter09/outreach-os" target="_blank" rel="noopener noreferrer" class="nav-link">GitHub</a></li>
+          <li><a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank" rel="noopener noreferrer"
+              class="nav-link">Docs</a></li>
+          <li><a href="https://github.com/Gitter09/outreach-os" target="_blank" rel="noopener noreferrer"
+              class="nav-link">GitHub</a></li>
         </ul>
       </nav>
 
@@ -57,8 +70,10 @@
   <div id="mobile-nav" class="mobile-nav" aria-hidden="true" inert>
     <ul class="mobile-nav__links">
       <li><a href="#features" class="mobile-nav__link">Features</a></li>
-      <li><a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank" rel="noopener noreferrer" class="mobile-nav__link">Docs</a></li>
-      <li><a href="https://github.com/Gitter09/outreach-os" target="_blank" rel="noopener noreferrer" class="mobile-nav__link">GitHub</a></li>
+      <li><a href="https://github.com/Gitter09/outreach-os/wiki" target="_blank" rel="noopener noreferrer"
+          class="mobile-nav__link">Docs</a></li>
+      <li><a href="https://github.com/Gitter09/outreach-os" target="_blank" rel="noopener noreferrer"
+          class="mobile-nav__link">GitHub</a></li>
     </ul>
     <div class="mobile-nav__footer">
       <a href="https://github.com/Gitter09/outreach-os/releases" class="btn btn-primary btn-lg" style="width: 100%;">
@@ -76,10 +91,12 @@
     <!-- headline -->
     <div class="hero-content">
 
-      <h1><span class="h1-line1">I built my own</span><span class="h1-line1b">CRM</span><span class="h1-line2">instead of paying for one.</span></h1>
+      <h1><span class="h1-line1">I built my own</span><span class="h1-line1b">CRM</span><span class="h1-line2">instead
+          of paying for one.</span></h1>
 
       <p class="hero-sub">
-        Streak's free trial expired. I refused to pay ₹3000/month for features I knew I could build. So I built them. This is that product.
+        Streak's free trial expired. I refused to pay ₹3000/month for features I knew I could build. So I built them.
+        This is that product.
       </p>
 
       <div class="hero-ctas">
@@ -130,7 +147,7 @@
                   <span class="dm-filter">Display ▾</span>
                 </div>
               </div>
-              
+
               <div class="dm-table">
                 <div class="dm-th">
                   <div style="width:240px">Contact</div>
@@ -223,47 +240,56 @@
             <div class="dm-activity">
               <div class="dm-act-header">
                 <div>Sarah Chen</div>
-                <div style="color:var(--text-3);font-size:11px;font-weight:400;margin-top:2px;">VP at Nexus Ventures</div>
+                <div style="color:var(--text-3);font-size:11px;font-weight:400;margin-top:2px;">VP at Nexus Ventures
+                </div>
               </div>
               <div class="dm-act-feed">
                 <div class="dm-act-item">
                   <div class="dm-act-av system-av">⚡</div>
                   <div class="dm-act-content">
-                    <div><span class="dm-act-name">Outreach Engine</span> tracked an email open <span class="dm-act-time">· 2h ago</span></div>
+                    <div><span class="dm-act-name">Outreach Engine</span> tracked an email open <span
+                        class="dm-act-time">· 2h ago</span></div>
                     <div class="dm-act-meta">Subject: Following up — OutreachOS Seed Round</div>
                   </div>
                 </div>
                 <div class="dm-act-item">
                   <div class="dm-act-av">HS</div>
                   <div class="dm-act-content">
-                    <div><span class="dm-act-name">Harshit Singh</span> added a note <span class="dm-act-time">· 1d ago</span></div>
-                    <div class="dm-act-quote">Prefers straight-to-the-point updates. Let's send the deck directly instead of asking for permission.</div>
+                    <div><span class="dm-act-name">Harshit Singh</span> added a note <span class="dm-act-time">· 1d
+                        ago</span></div>
+                    <div class="dm-act-quote">Prefers straight-to-the-point updates. Let's send the deck directly
+                      instead of asking for permission.</div>
                   </div>
                 </div>
                 <div class="dm-act-item">
                   <div class="dm-act-av system-av" style="background:#5c5c5c;color:#fff;">🔗</div>
                   <div class="dm-act-content">
-                    <div><span class="dm-act-name">LinkedIn Sync</span> updated profile <span class="dm-act-time">· 2d ago</span></div>
+                    <div><span class="dm-act-name">LinkedIn Sync</span> updated profile <span class="dm-act-time">· 2d
+                        ago</span></div>
                     <div class="dm-act-meta">New title: VP (was Principal)</div>
                   </div>
                 </div>
                 <div class="dm-act-item">
                   <div class="dm-act-av system-av" style="background:#5c5c5c;color:#fff;">→</div>
                   <div class="dm-act-content">
-                    <div><span class="dm-act-name">System</span> moved to <span style="color:var(--text);font-weight:500">Interested</span> <span class="dm-act-time">· 3d ago</span></div>
+                    <div><span class="dm-act-name">System</span> moved to <span
+                        style="color:var(--text);font-weight:500">Interested</span> <span class="dm-act-time">· 3d
+                        ago</span></div>
                   </div>
                 </div>
                 <div class="dm-act-item">
                   <div class="dm-act-av">HS</div>
                   <div class="dm-act-content">
-                    <div><span class="dm-act-name">Harshit Singh</span> sent an email <span class="dm-act-time">· 3d ago</span></div>
+                    <div><span class="dm-act-name">Harshit Singh</span> sent an email <span class="dm-act-time">· 3d
+                        ago</span></div>
                     <div class="dm-act-meta">Used template: VC Cold Outreach</div>
                   </div>
                 </div>
                 <div class="dm-act-item">
                   <div class="dm-act-av system-av" style="background:#5c5c5c;color:#fff;">+</div>
                   <div class="dm-act-content">
-                    <div><span class="dm-act-name">System</span> created contact <span class="dm-act-time">· 1w ago</span></div>
+                    <div><span class="dm-act-name">System</span> created contact <span class="dm-act-time">· 1w
+                        ago</span></div>
                   </div>
                 </div>
               </div>
@@ -316,7 +342,8 @@
       <div class="feat-hero-intro reveal">
         <h2>
           <span class="hl-white">A personal engine for professional networks.</span>
-          <span class="hl-grey">Built with Rust for absolute data persistence and zero latency. OutreachOS is a local-first interface designed entirely around how I manage relationships.</span>
+          <span class="hl-grey">Built with Rust for absolute data persistence and zero latency. OutreachOS is a
+            local-first interface designed entirely around how I manage relationships.</span>
         </h2>
       </div>
 
@@ -335,19 +362,21 @@
                 <path d="M120 110 L200 70 L120 30 L40 70 Z" fill="rgba(255,255,255,0.02)" />
                 <ellipse cx="120" cy="70" rx="30" ry="15" stroke-dasharray="4 4" />
                 <path d="M100 70 L140 70 M105 75 L135 75 M110 80 L130 80" />
-                <path d="M40 70 v60 M200 70 v60 M120 170 v-60 M120 110 L120 170" stroke-width="0.5" stroke="rgba(255,255,255,0.08)"/>
+                <path d="M40 70 v60 M200 70 v60 M120 170 v-60 M120 110 L120 170" stroke-width="0.5"
+                  stroke="rgba(255,255,255,0.08)" />
               </g>
             </svg>
           </div>
           <div class="fg-text-box">
             <h4>LinkedIn Import</h4>
-            <p>Two-step CSV / XLSX import with column mapping and smart duplicate detection. Skip, merge, or import all.</p>
+            <p>Two-step CSV / XLSX import with column mapping and smart duplicate detection. Skip, merge, or import all.
+            </p>
           </div>
         </div>
         <div class="fg-item reveal d2">
           <div class="fg-label">FIG 1.2</div>
           <div class="fg-art">
-             <svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-linejoin="round">
                 <path d="M120 90 L160 70 L120 50 L80 70 Z" fill="rgba(255,255,255,0.03)" />
                 <path d="M80 70 L120 90 L120 130 L80 110 Z" />
@@ -363,7 +392,8 @@
                   <path d="M100 80 L120 90 L120 110 L100 100 Z" />
                   <path d="M120 90 L140 80 L140 100 L120 110 Z" />
                 </g>
-                <path d="M120 130 L120 160 M80 110 L60 120 M160 110 L180 120" stroke="rgba(255,255,255,0.08)" stroke-dasharray="2 2" />
+                <path d="M120 130 L120 160 M80 110 L60 120 M160 110 L180 120" stroke="rgba(255,255,255,0.08)"
+                  stroke-dasharray="2 2" />
               </g>
             </svg>
           </div>
@@ -375,7 +405,7 @@
         <div class="fg-item reveal d3">
           <div class="fg-label">FIG 1.3</div>
           <div class="fg-art">
-             <svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-linejoin="round">
                 <path d="M120 180 L200 140 L120 100 L40 140 Z" />
                 <path d="M60 130 L140 170 M80 120 L160 160 M100 110 L180 150" stroke="rgba(255,255,255,0.05)" />
@@ -385,7 +415,8 @@
                 <circle cx="140" cy="100" r="3" fill="rgba(255,255,255,0.3)" />
                 <circle cx="100" cy="70" r="3" fill="rgba(255,255,255,0.3)" />
                 <circle cx="160" cy="80" r="3" fill="rgba(255,255,255,0.3)" />
-                <path d="M120 90 L140 100 L160 80 M100 70 L120 90" stroke="rgba(255,255,255,0.2)" stroke-dasharray="2 2" />
+                <path d="M120 90 L140 100 L160 80 M100 70 L120 90" stroke="rgba(255,255,255,0.2)"
+                  stroke-dasharray="2 2" />
               </g>
             </svg>
           </div>
@@ -405,7 +436,8 @@
               <h3>Every relationship,<br>fully in context.</h3>
             </div>
             <div class="ftl-right">
-              <p class="feat-desc">A living profile for every contact. Editable summaries, full interaction timelines, LinkedIn and email linked — everything you need before you send that message.</p>
+              <p class="feat-desc">A living profile for every contact. Editable summaries, full interaction timelines,
+                LinkedIn and email linked — everything you need before you send that message.</p>
               <ul class="feat-list">
                 <li>Editable intelligence summary per contact</li>
                 <li>Full timeline of events, meetings, and notes</li>
@@ -415,7 +447,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="feat-visual wide reveal d2">
           <div class="feat-mock feat-scale">
             <div class="feat-mock-chrome">
@@ -434,22 +466,30 @@
                 </div>
                 <div class="fd-btn">✉ Compose email</div>
                 <div class="fd-rows">
-                  <div class="fd-r"><span class="fd-rk">Email</span><span class="fd-rv" style="font-size:9.5px">sarah.j@stripe.com</span></div>
-                  <div class="fd-r"><span class="fd-rk">Location</span><span class="fd-rv">San Francisco, CA</span></div>
+                  <div class="fd-r"><span class="fd-rk">Email</span><span class="fd-rv"
+                      style="font-size:9.5px">sarah.j@stripe.com</span></div>
+                  <div class="fd-r"><span class="fd-rk">Location</span><span class="fd-rv">San Francisco, CA</span>
+                  </div>
                   <div class="fd-r"><span class="fd-rk">Company</span><span class="fd-rv">Stripe</span></div>
-                  <div class="fd-r"><span class="fd-rk">Tags</span><span class="fd-rv" style="color:var(--text-3)">+ Add tag</span></div>
+                  <div class="fd-r"><span class="fd-rk">Tags</span><span class="fd-rv" style="color:var(--text-3)">+ Add
+                      tag</span></div>
                 </div>
-                
+
                 <!-- NEW: Socials -->
                 <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px;">
                   <div class="fd-sec" style="font-size: 8.5px; opacity: 0.8;">Links</div>
-                  <div class="fd-r"><span class="fd-rk">LinkedIn</span><span class="fd-rv" style="color: #0A66C2;">↗ Profile</span></div>
-                  <div class="fd-r"><span class="fd-rk">Career Page</span><span class="fd-rv" style="color: var(--text-2);">stripe.com/jobs</span></div>
+                  <div class="fd-r"><span class="fd-rk">LinkedIn</span><span class="fd-rv" style="color: #0A66C2;">↗
+                      Profile</span></div>
+                  <div class="fd-r"><span class="fd-rk">Career Page</span><span class="fd-rv"
+                      style="color: var(--text-2);">stripe.com/jobs</span></div>
                 </div>
 
                 <!-- NEW: Active Deals -->
-                <div style="margin-top: 24px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px dashed rgba(255,255,255,0.08);">
-                  <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px;">Target Role</div>
+                <div
+                  style="margin-top: 24px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px dashed rgba(255,255,255,0.08);">
+                  <div
+                    style="font-size: 9px; font-weight: 600; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px;">
+                    Target Role</div>
                   <div style="font-size: 11px; color: var(--text); font-weight: 500;">SWE Intern, Summer 2026</div>
                   <div style="font-size: 10px; color: #28c840; margin-top: 4px;">Referral secured</div>
                 </div>
@@ -459,7 +499,10 @@
                 <div style="display: flex; flex-direction: column; gap: 24px;">
                   <div>
                     <div class="fd-sec">✦ Highlights</div>
-                    <div id="fd-summary-text" class="fd-summary">Connected via alumni network. She manages university recruiting for core infrastructure teams. Needs my updated transcript before scheduling the technical screen. Mentioned priority is given to candidates with Rust or Go experience this year.</div>
+                    <div id="fd-summary-text" class="fd-summary">Connected via alumni network. She manages university
+                      recruiting for core infrastructure teams. Needs my updated transcript before scheduling the
+                      technical screen. Mentioned priority is given to candidates with Rust or Go experience this year.
+                    </div>
                   </div>
                   <div class="fd-pipeline">
                     <div class="fd-stage-row">
@@ -474,21 +517,28 @@
                     <div class="fd-sec">Key Properties</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
                       <!-- Existing 2 -->
-                      <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div
+                        style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="font-size: 9px; color: var(--text-3); text-transform: uppercase;">Source</div>
                         <div style="font-size: 11px; color: var(--text); margin-top: 4px;">Alumni Database</div>
                       </div>
-                      <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 9px; color: var(--text-3); text-transform: uppercase;">Location Preference</div>
+                      <div
+                        style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 9px; color: var(--text-3); text-transform: uppercase;">Location
+                          Preference</div>
                         <div style="font-size: 11px; color: var(--text); margin-top: 4px;">Seattle / SF</div>
                       </div>
                       <!-- Expanded 2 -->
-                      <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 9px; color: var(--text-3); text-transform: uppercase;">Action Required</div>
+                      <div
+                        style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 9px; color: var(--text-3); text-transform: uppercase;">Action Required
+                        </div>
                         <div style="font-size: 11px; color: var(--text); margin-top: 4px;">Complete HackerRank</div>
                       </div>
-                      <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 9px; color: var(--text-3); text-transform: uppercase;">Confidence Level</div>
+                      <div
+                        style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 9px; color: var(--text-3); text-transform: uppercase;">Confidence Level
+                        </div>
                         <div style="font-size: 11px; color: #ffbc2e; margin-top: 4px;">Medium (Competitive)</div>
                       </div>
                     </div>
@@ -498,73 +548,107 @@
                   <div>
                     <div class="fd-sec">Attached Files</div>
                     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-                      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+                      <div
+                        style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
                         <span style="font-size: 12px;">📄</span>
                         <span style="font-size: 10.5px; color: var(--text-2);">Priya_Resume_v4_Stripe.pdf</span>
                       </div>
-                      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+                      <div
+                        style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
                         <span style="font-size: 12px;">📄</span>
-                        <span style="font-size: 10.5px; color: var(--text-2);">Fall_2025_Unofficial_Transcript.pdf</span>
+                        <span
+                          style="font-size: 10.5px; color: var(--text-2);">Fall_2025_Unofficial_Transcript.pdf</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <!-- Column 2: Interaction Thread (Linear style) -->
-                <div style="background: rgba(255,255,255,0.02); border-left: 1px solid rgba(255,255,255,0.04); padding-left: 32px; display: flex; flex-direction: column; gap: 20px;">
+                <div
+                  style="background: rgba(255,255,255,0.02); border-left: 1px solid rgba(255,255,255,0.04); padding-left: 32px; display: flex; flex-direction: column; gap: 20px;">
                   <div class="fd-sec" style="margin-bottom: 0px;">Timeline</div>
-                  
+
                   <!-- Existing 1 -->
                   <div style="display: flex; gap: 12px;">
-                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #28c840; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">✓</div>
+                    <div
+                      style="width: 24px; height: 24px; border-radius: 50%; background: #28c840; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                      ✓</div>
                     <div>
-                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Phone Screen completed <span style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Today at 9:00 AM</span></div>
-                      <div style="margin-top: 6px; font-size: 10.5px; color: var(--text-2); line-height: 1.5;">Call with Sarah went perfectly. She is moving me to the technical assessment round.</div>
+                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Phone Screen completed <span
+                          style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Today at
+                          9:00 AM</span></div>
+                      <div style="margin-top: 6px; font-size: 10.5px; color: var(--text-2); line-height: 1.5;">Call with
+                        Sarah went perfectly. She is moving me to the technical assessment round.</div>
                     </div>
                   </div>
 
                   <!-- Existing 2 -->
                   <div style="display: flex; gap: 12px;">
-                    <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">✉</div>
+                    <div
+                      style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                      ✉</div>
                     <div>
-                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Email Opened <span style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Yesterday, 2:14 PM</span></div>
-                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-3);">Opening tracking fired from San Francisco, CA.</div>
+                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Email Opened <span
+                          style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Yesterday,
+                          2:14 PM</span></div>
+                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-3);">Opening tracking fired from
+                        San Francisco, CA.</div>
                     </div>
                   </div>
 
                   <!-- NEW -->
                   <div style="display: flex; gap: 12px;">
-                    <div style="width: 24px; height: 24px; border-radius: 8px; background: rgba(254,188,46,0.2); border: 1px solid rgba(254,188,46,0.4); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">💬</div>
+                    <div
+                      style="width: 24px; height: 24px; border-radius: 8px; background: rgba(254,188,46,0.2); border: 1px solid rgba(254,188,46,0.4); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                      💬</div>
                     <div>
-                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">LinkedIn Message <span style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Yesterday, 9:00 AM</span></div>
-                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-2);">"Hi Sarah, dropping a quick note here. Really enjoyed the Stripe engineering blog post you shared."</div>
+                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">LinkedIn Message <span
+                          style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Yesterday,
+                          9:00 AM</span></div>
+                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-2);">"Hi Sarah, dropping a quick
+                        note here. Really enjoyed the Stripe engineering blog post you shared."</div>
                     </div>
                   </div>
 
                   <!-- NEW -->
                   <div style="display: flex; gap: 12px;">
-                    <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">📎</div>
+                    <div
+                      style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                      📎</div>
                     <div>
-                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Cold Email Sent <span style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Jan 15th</span></div>
-                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-3);">Attached Priya_Resume_v4_Stripe.pdf via automated university outreach sequence.</div>
+                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Cold Email Sent <span
+                          style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Jan
+                          15th</span></div>
+                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-3);">Attached
+                        Priya_Resume_v4_Stripe.pdf via automated university outreach sequence.</div>
                     </div>
                   </div>
 
                   <!-- Existing 3 -->
                   <div style="display: flex; gap: 12px; opacity: 0.6;">
-                    <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">📝</div>
+                    <div
+                      style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                      📝</div>
                     <div>
-                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Note added <span style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Jan 12th</span></div>
-                      <div style="margin-top: 6px; font-size: 10.5px; color: var(--text-2); line-height: 1.5;">Found her email using Hunter.io. Added to target list for Tier 1 comp.</div>
+                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Note added <span
+                          style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Jan
+                          12th</span></div>
+                      <div style="margin-top: 6px; font-size: 10.5px; color: var(--text-2); line-height: 1.5;">Found her
+                        email using Hunter.io. Added to target list for Tier 1 comp.</div>
                     </div>
                   </div>
 
                   <!-- NEW -->
                   <div style="display: flex; gap: 12px; opacity: 0.4;">
-                    <div style="width: 24px; height: 24px; border-radius: 4px; background: rgba(255,95,87,0.2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">#️⃣</div>
+                    <div
+                      style="width: 24px; height: 24px; border-radius: 4px; background: rgba(255,95,87,0.2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0;">
+                      #️⃣</div>
                     <div>
-                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Added to List <span style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Jan 10th</span></div>
-                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-3);">Contact tagged as "Stripe" and "University Recruiter".</div>
+                      <div style="font-size: 11.5px; color: var(--text); font-weight: 500;">Added to List <span
+                          style="font-weight: 400; color: var(--text-3); font-size: 10px; margin-left: 4px;">Jan
+                          10th</span></div>
+                      <div style="margin-top: 4px; font-size: 10.5px; color: var(--text-3);">Contact tagged as "Stripe"
+                        and "University Recruiter".</div>
                     </div>
                   </div>
                 </div>
@@ -583,7 +667,8 @@
               <h3>Visual. Drag.<br>Done.</h3>
             </div>
             <div class="ftl-right">
-              <p class="feat-desc">Custom pipeline stages, drag-and-drop Kanban, bulk status updates, and a fast table view. Move relationships forward without losing track of a single one.</p>
+              <p class="feat-desc">Custom pipeline stages, drag-and-drop Kanban, bulk status updates, and a fast table
+                view. Move relationships forward without losing track of a single one.</p>
               <ul class="feat-list">
                 <li>5 built-in stages, fully customizable</li>
                 <li>Drag-and-drop Kanban board</li>
@@ -593,7 +678,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="feat-visual wide reveal d2">
           <div class="feat-mock feat-scale">
             <div class="feat-mock-chrome">
@@ -609,122 +694,165 @@
                 <div class="fk-card">
                   <div class="fk-card-name">Google</div>
                   <div class="fk-card-role">SWE Intern · Core Search</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Applied Jan 10</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Applied Jan 10</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Stripe</div>
                   <div class="fk-card-role">Backend Engineer Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Referral: Sarah Jones</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Referral: Sarah Jones</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Robinhood</div>
                   <div class="fk-card-role">Data Science Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Cold Email Sent</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Cold Email Sent</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Datadog</div>
                   <div class="fk-card-role">Software Engineer, Apps</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Applied Jan 12</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Applied Jan 12</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Atlassian</div>
                   <div class="fk-card-role">SWE Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Applied Jan 13</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Applied Jan 13</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Rippling</div>
                   <div class="fk-card-role">Foundational SWE Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Referral: David M.</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Referral: David M.</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Figma</div>
                   <div class="fk-card-role">Frontend SWE Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Applied Jan 14</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Applied Jan 14</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Notion</div>
                   <div class="fk-card-role">Software Engineer Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Cold Email Opened</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Cold Email Opened</div>
                 </div>
               </div>
-              
+
               <!-- Column 2: Screening -->
               <div class="fk-col">
                 <div class="fk-head"><span>Screening</span><span class="fk-cnt">6</span></div>
                 <div class="fk-card">
                   <div class="fk-card-name">Snowflake</div>
                   <div class="fk-card-role">Data Engineering Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">OA Completed 95%</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">
+                    OA Completed 95%</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Vercel</div>
                   <div class="fk-card-role">DX Software Engineer</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Recruiter Call scheduled</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Recruiter Call scheduled</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Coinbase</div>
                   <div class="fk-card-role">Backend SWE Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Pending OA review</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Pending OA review</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Linear</div>
                   <div class="fk-card-role">Product Engineer Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Sent Take-home</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Sent Take-home</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Palantir</div>
                   <div class="fk-card-role">Forward Deployed Eng</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">HackerRank sent (Due Fri)</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    HackerRank sent (Due Fri)</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Ramp</div>
                   <div class="fk-card-role">Risk Engineering Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Recruiter screening Thurs</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Recruiter screening Thurs</div>
                 </div>
               </div>
-              
+
               <!-- Column 3: Interview -->
               <div class="fk-col">
                 <div class="fk-head"><span>Interview</span><span class="fk-cnt">5</span></div>
-                <div id="sarah-card" class="fk-card" style="border-color:rgba(244,245,248,.14);border-top-color:rgba(244,245,248,.22);background:rgba(244,245,248,.05)">
+                <div id="sarah-card" class="fk-card"
+                  style="border-color:rgba(244,245,248,.14);border-top-color:rgba(244,245,248,.22);background:rgba(244,245,248,.05)">
                   <div class="fk-card-name" style="color:var(--text)">Meta</div>
                   <div class="fk-card-role">Enterprise SWE Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(40,200,64,0.15); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">Final Round Onsite</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(40,200,64,0.15); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">
+                    Final Round Onsite</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Apple</div>
                   <div class="fk-card-role">AIML Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Technical Round 1</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Technical Round 1</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">Scale AI</div>
                   <div class="fk-card-role">Research Engineer Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Systems Design Mock</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Systems Design Mock</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">OpenAI</div>
                   <div class="fk-card-role">Residency Program</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Behavioral completed</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Behavioral completed</div>
                 </div>
                 <div class="fk-card">
                   <div class="fk-card-name">NVIDIA</div>
                   <div class="fk-card-role">CUDA Optimization Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Technical Loop scheduled</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Technical Loop scheduled</div>
                 </div>
               </div>
-              
+
               <!-- Column 4: Offer -->
               <div class="fk-col" style="opacity: 0.8;">
                 <div class="fk-head"><span>Offer</span><span class="fk-cnt">2</span></div>
                 <div class="fk-card" style="border-left: 3px solid #28c840;">
                   <div class="fk-card-name">Microsoft</div>
                   <div class="fk-card-role">Explore Program</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">Offer Deadline: Jan 30</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">
+                    Offer Deadline: Jan 30</div>
                 </div>
                 <div class="fk-card" style="border-left: 3px solid #28c840;">
                   <div class="fk-card-name">Amazon</div>
                   <div class="fk-card-role">SDE Intern · AWS</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">Acceptance Sent</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: #28c840; font-weight: 500;">
+                    Acceptance Sent</div>
                 </div>
               </div>
 
@@ -734,17 +862,23 @@
                 <div class="fk-card" style="border-left: 3px solid #ff5f57;">
                   <div class="fk-card-name">Netflix</div>
                   <div class="fk-card-role">Core Eng Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Auto-reject (Resume screen)</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Auto-reject (Resume screen)</div>
                 </div>
                 <div class="fk-card" style="border-left: 3px solid #ff5f57;">
                   <div class="fk-card-name">Jane Street</div>
                   <div class="fk-card-role">Quant Trading Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Failed OA</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Failed OA</div>
                 </div>
                 <div class="fk-card" style="border-left: 3px solid #ff5f57;">
                   <div class="fk-card-name">Citadel</div>
                   <div class="fk-card-role">SWE Intern</div>
-                  <div style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">Position filled</div>
+                  <div
+                    style="margin-top: 8px; font-size: 8.5px; padding: 3px 6px; background: rgba(255,255,255,0.05); display: inline-block; border-radius: 4px; color: var(--text-3); font-weight: 500;">
+                    Position filled</div>
                 </div>
               </div>
             </div>
@@ -761,7 +895,8 @@
               <h3>Send smarter.<br>Know when they read it.</h3>
             </div>
             <div class="ftl-right">
-              <p class="feat-desc">OAuth with Gmail and Outlook. Mail merge templates with one-click variable insertion. Email open and click tracking — surfaced per contact, per thread.</p>
+              <p class="feat-desc">OAuth with Gmail and Outlook. Mail merge templates with one-click variable insertion.
+                Email open and click tracking — surfaced per contact, per thread.</p>
               <ul class="feat-list">
                 <li>Gmail &amp; Outlook connected via OAuth 2.0 PKCE</li>
                 <li>Mail merge templates with chip-based variables</li>
@@ -781,61 +916,86 @@
             </div>
             <div class="fe-layout" style="display: flex; height: 100%;">
               <!-- Side Inbox Pane -->
-              <div style="width: 280px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; background: rgba(0,0,0,0.2);">
-                <div style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; font-weight: 500; font-family: 'Space Grotesk', sans-serif;">Inbox (12 Unread)</div>
+              <div
+                style="width: 280px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; background: rgba(0,0,0,0.2);">
+                <div
+                  style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; font-weight: 500; font-family: 'Space Grotesk', sans-serif;">
+                  Inbox (12 Unread)</div>
                 <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
                   <!-- Thread 1 -->
-                  <div style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); background: rgba(255,255,255,0.02);">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                  <div
+                    style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); background: rgba(255,255,255,0.02);">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                       <span style="font-size: 12px; font-weight: 600; color: var(--text);">Sarah Jones</span>
                       <span style="font-size: 10px; color: var(--text-3);">10:42 AM</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Re: Following up — SWE Intern Application</div>
+                    <div
+                      style="font-size: 11px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      Re: Following up — SWE Intern Application</div>
                   </div>
                   <!-- Thread 2 -->
                   <div style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                       <span style="font-size: 12px; font-weight: 500; color: var(--text-2);">David Kim</span>
                       <span style="font-size: 10px; color: var(--text-3);">Yesterday</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Great meeting you at the career fair...</div>
+                    <div
+                      style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      Great meeting you at the career fair...</div>
                   </div>
                   <!-- Thread 3 -->
                   <div style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                       <span style="font-size: 12px; font-weight: 500; color: var(--text-2);">Michael Chang</span>
                       <span style="font-size: 10px; color: var(--text-3);">Mar 12</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Can you forward your latest transcript?</div>
+                    <div
+                      style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      Can you forward your latest transcript?</div>
                   </div>
                   <!-- Thread 4 -->
                   <div style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                       <span style="font-size: 12px; font-weight: 500; color: var(--text-2);">Emily Davis</span>
                       <span style="font-size: 10px; color: var(--text-3);">Mar 10</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Your application to Datadog</div>
+                    <div
+                      style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      Your application to Datadog</div>
                   </div>
                   <!-- Thread 5 -->
                   <div style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                       <span style="font-size: 12px; font-weight: 500; color: var(--text-2);">Recruiting Team</span>
                       <span style="font-size: 10px; color: var(--text-3);">Mar 08</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">HackerRank assignment attached!</div>
+                    <div
+                      style="font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      HackerRank assignment attached!</div>
                   </div>
                 </div>
               </div>
-              
+
               <!-- Right Pane Wrapper -->
               <div style="flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.1);">
                 <!-- Reading Pane -->
-                <div style="flex: 1; padding: 24px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-y: auto;">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+                <div
+                  style="flex: 1; padding: 24px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-y: auto;">
+                  <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
                     <div>
-                      <h2 style="font-size: 16px; color: var(--text); font-weight: 500; margin-bottom: 12px;">Following up — SWE Intern Application</h2>
-                      <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-2);">
-                        <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #FF7B00, #FF5500); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 11px;">SJ</div>
+                      <h2 style="font-size: 16px; color: var(--text); font-weight: 500; margin-bottom: 12px;">Following
+                        up — SWE Intern Application</h2>
+                      <div
+                        style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-2);">
+                        <div
+                          style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #FF7B00, #FF5500); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 11px;">
+                          SJ</div>
                         <div>
                           <div style="font-weight: 500; color: var(--text); margin-bottom: 2px;">Sarah Jones</div>
                           <div style="color: var(--text-3); font-size: 10.5px;">To: You</div>
@@ -846,8 +1006,10 @@
                   </div>
                   <div style="color: var(--text-2); font-size: 12.5px; line-height: 1.6;">
                     Hi Harshit,<br><br>
-                    Thanks for reaching out! Your background with Rust and systems engineering looks exactly like what we're targeting for the Core Infrastructure intern cohort.<br><br>
-                    Let's connect next week, I'm fully booked this Thursday. Send over some times that work for you and we'll schedule a 15-minute intro chat.<br><br>
+                    Thanks for reaching out! Your background with Rust and systems engineering looks exactly like what
+                    we're targeting for the Core Infrastructure intern cohort.<br><br>
+                    Let's connect next week, I'm fully booked this Thursday. Send over some times that work for you and
+                    we'll schedule a 15-minute intro chat.<br><br>
                     Best,<br>
                     Sarah Jones<br>
                     <span style="color: var(--text-3); font-size: 11px;">University Recruiting | Stripe</span>
@@ -856,39 +1018,45 @@
 
                 <!-- Compose Area -->
                 <div class="fe-compose" style="flex: none; padding-top: 16px;">
-                <div class="fe-field">
-                  <span class="fe-key">To</span>
-                  <span style="background:rgba(244,245,248,.08);border:1px solid rgba(244,245,248,.12);padding:2px 9px;border-radius:5px;font-size:10.5px;color:var(--text)">sarah.j@stripe.com</span>
-                </div>
-                <div class="fe-field">
-                  <span class="fe-key">Subject</span>
-                  <span style="color:var(--text)">Following up — SWE Intern Application</span>
-                </div>
-                <div class="fe-field" style="border-bottom:1px solid rgba(255,255,255,.03)">
-                  <span class="fe-key">Template</span>
-                  <span style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:2px 9px;border-radius:5px;font-size:10.5px;color:var(--text-2)">Alumni Cold Outreach ▾</span>
-                </div>
-                <div class="fe-body-area">
-                  <div style="margin-bottom: 24px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.1); color: var(--text-3); font-size: 11px;">
-                    <div>On Mar 14, 2026, at 10:42 AM, Sarah Jones wrote:</div>
-                    <div style="margin-top: 6px;">Thanks for reaching out! Let's connect next week, I'm fully booked this Thursday. Send over some times that work for you.</div>
+                  <div class="fe-field">
+                    <span class="fe-key">To</span>
+                    <span
+                      style="background:rgba(244,245,248,.08);border:1px solid rgba(244,245,248,.12);padding:2px 9px;border-radius:5px;font-size:10.5px;color:var(--text)">sarah.j@stripe.com</span>
                   </div>
-                  Hi <em>Sarah</em>,<br><br>
-                  Following up on my SWE Intern application. Given <em>Stripe</em>'s engineering culture, I believe my experience with Rust makes me a strong fit.<br><br>
-                  Would next Tuesday or Wednesday work for a 15-minute call?
-                </div>
-                <div class="fe-tracking">
-                  <span class="fe-tdot"></span>
-                  Email tracking enabled — opens &amp; clicks will be recorded
-                </div>
-                <div class="fe-footer">
-                  <div class="fe-actions">
-                    <span class="fe-chip">📎 Attach</span>
-                    <span class="fe-chip">⏰ Schedule</span>
+                  <div class="fe-field">
+                    <span class="fe-key">Subject</span>
+                    <span style="color:var(--text)">Following up — SWE Intern Application</span>
                   </div>
-                  <button class="fe-send">Send →</button>
+                  <div class="fe-field" style="border-bottom:1px solid rgba(255,255,255,.03)">
+                    <span class="fe-key">Template</span>
+                    <span
+                      style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:2px 9px;border-radius:5px;font-size:10.5px;color:var(--text-2)">Alumni
+                      Cold Outreach ▾</span>
+                  </div>
+                  <div class="fe-body-area">
+                    <div
+                      style="margin-bottom: 24px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.1); color: var(--text-3); font-size: 11px;">
+                      <div>On Mar 14, 2026, at 10:42 AM, Sarah Jones wrote:</div>
+                      <div style="margin-top: 6px;">Thanks for reaching out! Let's connect next week, I'm fully booked
+                        this Thursday. Send over some times that work for you.</div>
+                    </div>
+                    Hi <em>Sarah</em>,<br><br>
+                    Following up on my SWE Intern application. Given <em>Stripe</em>'s engineering culture, I believe my
+                    experience with Rust makes me a strong fit.<br><br>
+                    Would next Tuesday or Wednesday work for a 15-minute call?
+                  </div>
+                  <div class="fe-tracking">
+                    <span class="fe-tdot"></span>
+                    Email tracking enabled — opens &amp; clicks will be recorded
+                  </div>
+                  <div class="fe-footer">
+                    <div class="fe-actions">
+                      <span class="fe-chip">📎 Attach</span>
+                      <span class="fe-chip">⏰ Schedule</span>
+                    </div>
+                    <button class="fe-send">Send →</button>
+                  </div>
                 </div>
-              </div>
               </div>
             </div>
           </div>
@@ -908,9 +1076,14 @@
     <div class="container">
       <div class="why-inner reveal">
         <h2>Why I built this.</h2>
-        <p>Like every junior, I started my internship search in Google Sheets. It worked for the first 20 cold emails, but broke down completely by the 100th. Trying to track which engineers I emailed, who replied, and who I needed to follow up with became a nightmare of endless tabs and copy-pasted templates.</p>
-        <p>Existing CRMs were designed for sales teams with enterprise quotas, not students targeting SWE roles. I didn't need to track "$50k ARR pipelines". I just needed a fast, offline system to give me deep context before I hit send.</p>
-        <p>So I engineered it myself. No monthly subscriptions, no sluggish web apps. Just a blazing fast local tool to get the offer.</p>
+        <p>Like every junior, I started my internship search in Google Sheets. It worked for the first 20 cold emails,
+          but broke down completely by the 100th. Trying to track which engineers I emailed, who replied, and who I
+          needed to follow up with became a nightmare of endless tabs and copy-pasted templates.</p>
+        <p>Existing CRMs were designed for sales teams with enterprise quotas, not students targeting SWE roles. I
+          didn't need to track "$50k ARR pipelines". I just needed a fast, offline system to give me deep context before
+          I hit send.</p>
+        <p>So I engineered it myself. No monthly subscriptions, no sluggish web apps. Just a blazing fast local tool to
+          get the offer.</p>
       </div>
     </div>
   </section>
@@ -928,17 +1101,20 @@
         <div class="fg-item reveal d1">
           <p class="fg-label">Architecture</p>
           <h4>Local-first, always.</h4>
-          <p>No server means no recurring cost, no data leaving your machine, and no dependency on my uptime. The tradeoff: no sync across devices in v0.1. Worth it.</p>
+          <p>No server means no recurring cost, no data leaving your machine, and no dependency on my uptime. The
+            tradeoff: no sync across devices in v0.1. Worth it.</p>
         </div>
         <div class="fg-item reveal d2">
           <p class="fg-label">Scope</p>
           <h4>Deferred the AI layer.</h4>
-          <p>I had planned AI-assisted email drafting for v0.1. I cut it deliberately to ship faster. A product that ships without AI beats a product that never ships with it.</p>
+          <p>I had planned AI-assisted email drafting for v0.1. I cut it deliberately to ship faster. A product that
+            ships without AI beats a product that never ships with it.</p>
         </div>
         <div class="fg-item reveal d3">
           <p class="fg-label">Pricing</p>
           <h4>Free, not freemium.</h4>
-          <p>There's no $9 tier. This is a personal project I'm sharing publicly. If it grows into something more, I'll revisit — but not before doing the market research to justify it.</p>
+          <p>There's no $9 tier. This is a personal project I'm sharing publicly. If it grows into something more, I'll
+            revisit — but not before doing the market research to justify it.</p>
         </div>
       </div>
     </div>
@@ -978,7 +1154,8 @@
       <div class="pricing-head reveal" style="max-width:640px; margin: 0 auto;">
         <p class="s-label">Pricing</p>
         <h2>Free. No catch.</h2>
-        <p>This is a personal project. I built it for myself, open-sourced it, and you can use it for free. There's no paid tier, no subscription, no server sending your data anywhere. It runs on your machine.</p>
+        <p>This is a personal project. I built it for myself, open-sourced it, and you can use it for free. There's no
+          paid tier, no subscription, no server sending your data anywhere. It runs on your machine.</p>
         <div class="cta-btns" style="margin-top:32px">
           <a href="https://github.com/Gitter09/outreach-os/releases" class="btn btn-primary btn-lg">
             ↓&nbsp;&nbsp;Download Free
@@ -1003,9 +1180,15 @@
           <div class="footer-logo">
             <div class="footer-logo-mark">
               <svg width="17" height="17" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M300 120C344.057 120 384.415 135.83 415.702 162.11L353.568 236.159C339.829 219.991 320.9 210 300 210C258.026 210 224 250.294 224 300C224 349.706 258.026 390 300 390C341.974 390 376 349.706 376 300C376 283.896 372.427 268.78 366.17 255.702L449.59 199.857C468.794 228.488 480 262.935 480 300C480 399.411 399.411 480 300 480C200.589 480 120 399.411 120 300C120 200.589 200.589 120 300 120Z" fill="#000000"/>
-                <path d="M456.124 46.0815C483.732 58.1553 507.867 76.9668 526.317 100.791C544.766 124.615 556.939 152.69 561.72 182.441L530.264 187.496C526.329 163.011 516.31 139.905 501.127 120.298C485.943 100.691 466.08 85.2088 443.358 75.2721L456.124 46.0815Z" fill="#000000"/>
-                <path d="M430.086 102.473C449.258 110.858 466.019 123.921 478.831 140.466C491.643 157.011 500.097 176.507 503.417 197.167L476.36 201.515C473.768 185.384 467.168 170.162 457.164 157.244C447.161 144.327 434.075 134.127 419.106 127.581L430.086 102.473Z" fill="#000000"/>
+                <path
+                  d="M300 120C344.057 120 384.415 135.83 415.702 162.11L353.568 236.159C339.829 219.991 320.9 210 300 210C258.026 210 224 250.294 224 300C224 349.706 258.026 390 300 390C341.974 390 376 349.706 376 300C376 283.896 372.427 268.78 366.17 255.702L449.59 199.857C468.794 228.488 480 262.935 480 300C480 399.411 399.411 480 300 480C200.589 480 120 399.411 120 300C120 200.589 200.589 120 300 120Z"
+                  fill="#000000" />
+                <path
+                  d="M456.124 46.0815C483.732 58.1553 507.867 76.9668 526.317 100.791C544.766 124.615 556.939 152.69 561.72 182.441L530.264 187.496C526.329 163.011 516.31 139.905 501.127 120.298C485.943 100.691 466.08 85.2088 443.358 75.2721L456.124 46.0815Z"
+                  fill="#000000" />
+                <path
+                  d="M430.086 102.473C449.258 110.858 466.019 123.921 478.831 140.466C491.643 157.011 500.097 176.507 503.417 197.167L476.36 201.515C473.768 185.384 467.168 170.162 457.164 157.244C447.161 144.327 434.075 134.127 419.106 127.581L430.086 102.473Z"
+                  fill="#000000" />
               </svg>
             </div>
             <span class="footer-logo-name">OutreachOS</span>
