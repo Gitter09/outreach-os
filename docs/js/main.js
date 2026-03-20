@@ -48,104 +48,6 @@
   window.addEventListener('scroll', updateHeaderState, { passive: true });
   updateHeaderState();
 
-  /* ── PANE ENTRY ANIMATIONS ── */
-  function onPaneEnter(id) {
-    if (id === 'pipeline') {
-      const sarahCard = document.getElementById('sarah-card');
-      if (!sarahCard) return;
-      sarahCard.classList.remove('card-pulse');
-      void sarahCard.offsetWidth;
-      sarahCard.classList.add('card-pulse');
-      setTimeout(() => sarahCard.classList.remove('card-pulse'), 520);
-    }
-
-    if (id === 'outreach') {
-      triggerOutreachEntry();
-    }
-
-    if (id === 'intel') {
-      triggerIntelEntry();
-    }
-  }
-
-  function triggerOutreachEntry() {
-    const composeBody = document.querySelector('#pane-outreach .compose-body');
-    if (composeBody) {
-      const vars = composeBody.querySelectorAll('em');
-      vars.forEach((v, i) => {
-        v.classList.remove('var-pulse');
-        void v.offsetWidth;
-        setTimeout(() => {
-          v.classList.add('var-pulse');
-          setTimeout(() => v.classList.remove('var-pulse'), 720);
-        }, i * 160);
-      });
-    }
-
-    const trackingRow = document.querySelector('#pane-outreach .tracking-row');
-    if (trackingRow) {
-      trackingRow.classList.remove('tracking-visible');
-      setTimeout(() => {
-        trackingRow.classList.add('tracking-visible');
-      }, 420);
-    }
-  }
-
-  function triggerIntelEntry() {
-    const activityLine = document.getElementById('activity-line');
-    if (!activityLine) return;
-    activityLine.classList.remove('activity-shimmer');
-    void activityLine.offsetWidth;
-    activityLine.classList.add('activity-shimmer');
-    setTimeout(() => activityLine.classList.remove('activity-shimmer'), 780);
-  }
-
-  /* ── HERO INTERACTIVE TABS ── */
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabPanes = document.querySelectorAll('.tab-pane');
-
-  function switchTab(id) {
-    tabBtns.forEach(b => {
-      b.classList.toggle('active', b.dataset.tab === id);
-    });
-
-    const current = document.querySelector('.tab-pane.active');
-    const next = document.getElementById('pane-' + id);
-    if (!next || current === next) return;
-
-    current.style.opacity = '0';
-    current.style.transform = 'translateY(6px)';
-
-    setTimeout(() => {
-      current.classList.remove('active');
-      current.style.opacity = '';
-      current.style.transform = '';
-
-      next.classList.add('active');
-      next.style.opacity = '0';
-      next.style.transform = 'translateY(6px)';
-      // force reflow
-      next.getBoundingClientRect();
-      next.style.transition = 'opacity .28s ease, transform .28s ease';
-      next.style.opacity = '1';
-      next.style.transform = 'translateY(0)';
-
-      onPaneEnter(id);
-
-      setTimeout(() => {
-        next.style.transition = '';
-      }, 300);
-    }, 180);
-  }
-
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-  });
-
-  // add transition style to all panes
-  tabPanes.forEach(p => {
-    p.style.transition = 'opacity .18s ease, transform .18s ease';
-  });
 
   /* ── SCROLL REVEAL ── */
   const revealEls = document.querySelectorAll('.reveal');
@@ -156,7 +58,7 @@
         // stagger siblings inside the same parent
         const parent = entry.target.parentElement;
         const siblings = Array.from(parent.querySelectorAll('.reveal:not(.in)'));
-        siblings.forEach((el, i) => {
+        siblings.forEach(el => {
           const base = parseFloat(getComputedStyle(el).transitionDelay) || 0;
           const extra = siblings.indexOf(el) * 0.07;
           el.style.transitionDelay = (base + extra) + 's';
@@ -221,25 +123,29 @@
 
     allHeadlines.forEach(wrapper => clipObserver.observe(wrapper));
 
-    const h1line1 = document.querySelector('.h1-line1');
-    const h1line2 = document.querySelector('.h1-line2');
+    const h1Spans = [
+      document.querySelector('.h1-sm'),
+      document.querySelector('.h1-xl'),
+      document.querySelector('.h1-muted'),
+      document.querySelector('.hero-punch'),
+    ];
 
     function wrapHeroSpan(span) {
       if (!span) return null;
       const wrapper = document.createElement('div');
       wrapper.className = 'clip-reveal-outer clip-pending';
-      wrapper.style.display = 'inline-block';
       span.parentNode.insertBefore(wrapper, span);
       wrapper.appendChild(span);
       return wrapper;
     }
 
-    const w1 = wrapHeroSpan(h1line1);
-    const w2 = wrapHeroSpan(h1line2);
+    const heroWrappers = h1Spans.map(wrapHeroSpan);
 
     function fireHeroReveal() {
-      if (w1) revealClip(w1, 120);
-      if (w2) revealClip(w2, 300);
+      const delays = [80, 220, 380, 520];
+      heroWrappers.forEach((w, idx) => {
+        if (w) revealClip(w, delays[idx]);
+      });
     }
 
     if (document.readyState === 'loading') {
@@ -248,21 +154,6 @@
       fireHeroReveal();
     }
   })();
-
-
-  /* ── AUTO cycle tabs every 4s if user hasn't interacted ── */
-  const tabOrder = ['contacts', 'pipeline', 'outreach', 'intel'];
-  let tabIdx = 0;
-  let autoCycle = true;
-
-  tabBtns.forEach(b => {
-    b.addEventListener('click', () => { autoCycle = false; });
-  });
-  setInterval(() => {
-    if (!autoCycle) return;
-    tabIdx = (tabIdx + 1) % tabOrder.length;
-    switchTab(tabOrder[tabIdx]);
-  }, 4200);
 
 
 
