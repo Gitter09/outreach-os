@@ -443,7 +443,6 @@ async fn clear_contact_next_date(db: tauri::State<'_, Db>, id: String) -> Result
     Ok(())
 }
 
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -937,10 +936,7 @@ async fn attach_file(
 }
 
 #[tauri::command]
-async fn delete_contact_file(
-    db: tauri::State<'_, Db>,
-    id: String,
-) -> Result<(), AppError> {
+async fn delete_contact_file(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
     let row = sqlx::query_as::<_, ContactFileRow>(
         "SELECT id, contact_id, filename, file_path, created_at FROM contact_files WHERE id = ?",
     )
@@ -961,10 +957,7 @@ async fn delete_contact_file(
 }
 
 #[tauri::command]
-async fn open_contact_file(
-    db: tauri::State<'_, Db>,
-    id: String,
-) -> Result<(), AppError> {
+async fn open_contact_file(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
     let row = sqlx::query_as::<_, ContactFileRow>(
         "SELECT id, contact_id, filename, file_path, created_at FROM contact_files WHERE id = ?",
     )
@@ -1081,10 +1074,7 @@ async fn get_scheduled_emails(
 }
 
 #[tauri::command]
-async fn cancel_scheduled_email(
-    db: tauri::State<'_, Db>,
-    id: String,
-) -> Result<(), AppError> {
+async fn cancel_scheduled_email(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
     let pool = db.pool();
     sqlx::query("DELETE FROM scheduled_emails WHERE id = ?")
         .bind(&id)
@@ -1640,12 +1630,13 @@ async fn assign_tag(
 
     // Write a tag_added activity event. Look up the tag name for a readable title.
     // Errors here are intentionally ignored — the assignment already succeeded.
-    let tag_name: Option<String> = sqlx::query_scalar::<_, String>("SELECT name FROM tags WHERE id = ?")
-        .bind(&tag_id)
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten();
+    let tag_name: Option<String> =
+        sqlx::query_scalar::<_, String>("SELECT name FROM tags WHERE id = ?")
+            .bind(&tag_id)
+            .fetch_optional(pool)
+            .await
+            .ok()
+            .flatten();
     if let Some(name) = tag_name {
         let event_id = uuid::Uuid::new_v4().to_string();
         let title = format!("Tag added: {}", name);
@@ -1671,12 +1662,13 @@ async fn unassign_tag(
 ) -> Result<(), AppError> {
     let pool = db.pool();
     // Look up tag name BEFORE deleting — the tag record still exists, only the assignment is removed.
-    let tag_name: Option<String> = sqlx::query_scalar::<_, String>("SELECT name FROM tags WHERE id = ?")
-        .bind(&tag_id)
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten();
+    let tag_name: Option<String> =
+        sqlx::query_scalar::<_, String>("SELECT name FROM tags WHERE id = ?")
+            .bind(&tag_id)
+            .fetch_optional(pool)
+            .await
+            .ok()
+            .flatten();
 
     sqlx::query("DELETE FROM contact_tags WHERE contact_id = ? AND tag_id = ?")
         .bind(&contact_id)
