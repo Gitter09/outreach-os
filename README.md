@@ -103,7 +103,7 @@ These are the things I'm actively thinking about or working toward. No timelines
  
 ## License
  
-Private — All Rights Reserved
+OutreachOS is source-available and free to use. You can read the code, fork it, build on it, and share it. You just can't sell it or build a paid product on top of it without talking to me first.
  
 ---
  
