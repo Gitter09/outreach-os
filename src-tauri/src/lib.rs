@@ -4,6 +4,7 @@ use tauri::Manager;
 mod error;
 use error::AppError;
 mod scheduler; // Added scheduler module
+mod utils; // Added utils module
 
 pub fn extract_linkedin_slug(url: &str) -> Option<&str> {
     // Match /in/username or /pub/username patterns
@@ -37,7 +38,19 @@ async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, 
         SELECT 
             c.*, 
             s.label as status_label, 
-            s.color as status_color 
+            s.color as status_color,
+            (
+                SELECT MIN(d)
+                FROM (
+                    SELECT c.next_contact_date AS d WHERE c.next_contact_date IS NOT NULL
+                    UNION ALL
+                    SELECT MIN(event_at) AS d 
+                    FROM contact_events 
+                    WHERE contact_id = c.id 
+                      AND event_type = 'user_event' 
+                      AND event_at >= CURRENT_TIMESTAMP
+                )
+            ) as effective_next_date
         FROM contacts c 
         LEFT JOIN statuses s ON c.status_id = s.id
         ORDER BY c.updated_at DESC
@@ -109,7 +122,19 @@ async fn get_contact_by_id(
         SELECT 
             c.*, 
             s.label as status_label, 
-            s.color as status_color 
+            s.color as status_color,
+            (
+                SELECT MIN(d)
+                FROM (
+                    SELECT c.next_contact_date AS d WHERE c.next_contact_date IS NOT NULL
+                    UNION ALL
+                    SELECT MIN(event_at) AS d 
+                    FROM contact_events 
+                    WHERE contact_id = c.id 
+                      AND event_type = 'user_event' 
+                      AND event_at >= CURRENT_TIMESTAMP
+                )
+            ) as effective_next_date
         FROM contacts c 
         LEFT JOIN statuses s ON c.status_id = s.id
         WHERE c.id = ?
@@ -349,8 +374,8 @@ async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Re
     .bind(args.last_name)
     .bind(args.email)
     .bind(args.linkedin_url)
-    .bind(resolved_status_label)
-    .bind(args.status_id)
+    .bind(&resolved_status_label)
+    .bind(&args.status_id)
     .bind(args.last_contacted_date)
     .bind(args.next_contact_date)
     .bind(args.cadence_stage)
@@ -359,11 +384,40 @@ async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Re
     .bind(args.location)
     .bind(args.company_website)
     .bind(args.intelligence_summary)
-    .bind(args.id)
+    .bind(&args.id)
     .execute(pool)
     .await?;
+
+    // Write a status_change activity event when status_id is explicitly changed.
+    // Errors here are intentionally ignored — the contact update already succeeded.
+    if let (Some(_), Some(ref label)) = (&args.status_id, &resolved_status_label) {
+        let event_id = uuid::Uuid::new_v4().to_string();
+        let title = format!("Moved to {}", label);
+        let _ = sqlx::query(
+            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
+        )
+        .bind(&event_id)
+        .bind(&args.id)
+        .bind(&title)
+        .bind(Option::<String>::None)
+        .execute(pool)
+        .await;
+    }
+
     Ok(())
 }
+
+#[tauri::command]
+async fn clear_contact_next_date(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
+    let pool = db.pool();
+    sqlx::query("UPDATE contacts SET next_contact_date = NULL WHERE id = ?")
+        .bind(&id)
+        .execute(pool)
+        .await
+        .map_err(|e: sqlx::Error| e.to_string())?;
+    Ok(())
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -437,6 +491,7 @@ pub fn run() {
             add_contact,
             update_contact,
             delete_contact,
+            clear_contact_next_date,
             get_email_accounts,
             gmail_connect,
             outlook_connect,
@@ -446,6 +501,7 @@ pub fn run() {
             get_emails_for_contact,
             sync_contact_emails,
             get_contact_events,
+            get_contact_activity,
             create_contact_event,
             update_contact_event,
             delete_contact_event,
@@ -475,11 +531,10 @@ pub fn run() {
             set_lock_pin,
             verify_lock_pin,
             has_lock_pin,
-            has_lock_pin,
             remove_lock_pin,
             get_email_templates,
-            upsert_email_template,
-            delete_email_template
+            delete_email_template,
+            utils::open_external_url
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -684,15 +739,35 @@ async fn outlook_connect(db: tauri::State<'_, Db>) -> Result<String, AppError> {
 async fn email_send(
     db: tauri::State<'_, Db>,
     account_id: String,
+    contact_id: Option<String>,
     to: String,
     subject: String,
     body: String,
 ) -> Result<String, AppError> {
     let service = outreach_core::EmailService::new(db.inner().clone());
-    service
+    let result = service
         .send_email(&account_id, &to, &subject, &body)
         .await
-        .map_err(|e| e.to_string().into())
+        .map_err(|e| AppError::from(e.to_string()))?;
+
+    // Write an email_sent activity event if this email is linked to a contact.
+    // Errors here are intentionally ignored — the send already succeeded.
+    if let Some(ref cid) = contact_id {
+        let pool = db.pool();
+        let event_id = uuid::Uuid::new_v4().to_string();
+        let title = format!("Email sent: {}", subject);
+        let _ = sqlx::query(
+            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
+        )
+        .bind(&event_id)
+        .bind(cid)
+        .bind(&title)
+        .bind(Option::<String>::None)
+        .execute(pool)
+        .await;
+    }
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -705,10 +780,27 @@ async fn email_schedule(
     scheduled_at: i64,
 ) -> Result<String, AppError> {
     let service = outreach_core::EmailService::new(db.inner().clone());
-    service
+    let result = service
         .schedule_email(&account_id, &contact_id, &subject, &body, scheduled_at)
         .await
-        .map_err(|e| e.to_string().into())
+        .map_err(|e| AppError::from(e.to_string()))?;
+
+    // Write an email_scheduled activity event.
+    // Errors here are intentionally ignored — the schedule already succeeded.
+    let pool = db.pool();
+    let event_id = uuid::Uuid::new_v4().to_string();
+    let title = format!("Email scheduled: {}", subject);
+    let _ = sqlx::query(
+        "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
+    )
+    .bind(&event_id)
+    .bind(&contact_id)
+    .bind(&title)
+    .bind(Option::<String>::None)
+    .execute(pool)
+    .await;
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -834,7 +926,7 @@ async fn export_all_data(db: tauri::State<'_, Db>) -> Result<String, AppError> {
     let pool = db.pool();
 
     let contacts = sqlx::query_as::<sqlx::Sqlite, outreach_core::models::Contact>(
-        "SELECT id, company_id, first_name, last_name, email, linkedin_url, title, company, location, company_website, status, status_id, status_label, status_color, intelligence_summary, last_interaction_at, last_contacted_date, next_contact_date, cadence_stage, created_at, updated_at FROM contacts"
+        "SELECT id, company_id, first_name, last_name, email, linkedin_url, title, company, location, company_website, status, status_id, status_label, status_color, intelligence_summary, last_interaction_at, last_contacted_date, next_contact_date, NULL as effective_next_date, NULL as next_contact_event, cadence_stage, created_at, updated_at FROM contacts"
     )
     .fetch_all(pool)
     .await?;
@@ -1226,10 +1318,33 @@ async fn assign_tag(
 ) -> Result<(), AppError> {
     let pool = db.pool();
     sqlx::query("INSERT OR IGNORE INTO contact_tags (contact_id, tag_id) VALUES (?, ?)")
-        .bind(contact_id)
-        .bind(tag_id)
+        .bind(&contact_id)
+        .bind(&tag_id)
         .execute(pool)
         .await?;
+
+    // Write a tag_added activity event. Look up the tag name for a readable title.
+    // Errors here are intentionally ignored — the assignment already succeeded.
+    let tag_name: Option<String> = sqlx::query_scalar::<_, String>("SELECT name FROM tags WHERE id = ?")
+        .bind(&tag_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+    if let Some(name) = tag_name {
+        let event_id = uuid::Uuid::new_v4().to_string();
+        let title = format!("Tag added: {}", name);
+        let _ = sqlx::query(
+            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
+        )
+        .bind(&event_id)
+        .bind(&contact_id)
+        .bind(&title)
+        .bind(Option::<String>::None)
+        .execute(pool)
+        .await;
+    }
+
     Ok(())
 }
 
@@ -1240,11 +1355,36 @@ async fn unassign_tag(
     tag_id: String,
 ) -> Result<(), AppError> {
     let pool = db.pool();
+    // Look up tag name BEFORE deleting — the tag record still exists, only the assignment is removed.
+    let tag_name: Option<String> = sqlx::query_scalar::<_, String>("SELECT name FROM tags WHERE id = ?")
+        .bind(&tag_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+
     sqlx::query("DELETE FROM contact_tags WHERE contact_id = ? AND tag_id = ?")
-        .bind(contact_id)
-        .bind(tag_id)
+        .bind(&contact_id)
+        .bind(&tag_id)
         .execute(pool)
         .await?;
+
+    // Write a tag_removed activity event.
+    // Errors here are intentionally ignored — the unassignment already succeeded.
+    if let Some(name) = tag_name {
+        let event_id = uuid::Uuid::new_v4().to_string();
+        let title = format!("Tag removed: {}", name);
+        let _ = sqlx::query(
+            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
+        )
+        .bind(&event_id)
+        .bind(&contact_id)
+        .bind(&title)
+        .bind(Option::<String>::None)
+        .execute(pool)
+        .await;
+    }
+
     Ok(())
 }
 
@@ -1399,8 +1539,25 @@ async fn get_contact_events(
     contact_id: String,
 ) -> Result<Vec<outreach_core::models::ContactEvent>, AppError> {
     let pool = db.pool();
+    // Only return user-created events (meetings, calls, etc.) — NOT system activity
     let events = sqlx::query_as::<_, outreach_core::models::ContactEvent>(
-        "SELECT * FROM contact_events WHERE contact_id = ? ORDER BY event_at DESC",
+        "SELECT * FROM contact_events WHERE contact_id = ? AND event_type = 'user_event' ORDER BY event_at ASC",
+    )
+    .bind(contact_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(events)
+}
+
+#[tauri::command]
+async fn get_contact_activity(
+    db: tauri::State<'_, Db>,
+    contact_id: String,
+) -> Result<Vec<outreach_core::models::ContactEvent>, AppError> {
+    let pool = db.pool();
+    // Only return system-generated activity events for the Activity tab
+    let events = sqlx::query_as::<_, outreach_core::models::ContactEvent>(
+        "SELECT * FROM contact_events WHERE contact_id = ? AND event_type = 'activity' ORDER BY event_at DESC",
     )
     .bind(contact_id)
     .fetch_all(pool)
@@ -1502,7 +1659,8 @@ async fn sync_contact_emails(db: tauri::State<'_, Db>, contact_id: String) -> Re
         });
     }
 
-    // Also update the last_interaction_at for the contact based on the most recent message
+    // Also update the last_interaction_at for the contact based on the most recent message,
+    // and register activity events for any received emails not yet tracked.
     tokio::spawn(async move {
         let pool = pool;
         let most_recent = sqlx::query_scalar::<_, chrono::DateTime<chrono::Utc>>(
@@ -1515,9 +1673,39 @@ async fn sync_contact_emails(db: tauri::State<'_, Db>, contact_id: String) -> Re
         if let Ok(Some(latest)) = most_recent {
             let _ = sqlx::query("UPDATE contacts SET last_interaction_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                 .bind(latest)
-                .bind(contact_id)
+                .bind(&contact_id)
                 .execute(&pool)
                 .await;
+        }
+
+        // Create activity events for received emails not yet registered.
+        // Uses 'recv_{message_id}' as the event PK so INSERT OR IGNORE deduplicates on repeat syncs.
+        let msgs: Vec<(String, Option<String>, Option<chrono::DateTime<chrono::Utc>>)> =
+            sqlx::query_as(
+                r#"SELECT em.id, em.subject, em.sent_at
+                   FROM email_messages em
+                   JOIN email_threads et ON em.thread_id = et.id
+                   WHERE et.contact_id = ? AND em.status = 'received'"#,
+            )
+            .bind(&contact_id)
+            .fetch_all(&pool)
+            .await
+            .unwrap_or_default();
+
+        for (msg_id, subject, sent_at) in msgs {
+            let event_id = format!("recv_{}", msg_id);
+            let title = format!("Email received: {}", subject.unwrap_or_else(|| "(no subject)".to_string()));
+            let event_at = sent_at.unwrap_or_else(chrono::Utc::now);
+            let _ = sqlx::query(
+                "INSERT OR IGNORE INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, ?, 'activity')",
+            )
+            .bind(&event_id)
+            .bind(&contact_id)
+            .bind(&title)
+            .bind(Option::<String>::None)
+            .bind(event_at)
+            .execute(&pool)
+            .await;
         }
     });
 

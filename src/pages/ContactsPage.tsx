@@ -432,7 +432,16 @@ export function ContactsPage() {
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             {contact.linkedin_url && (
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const url = contact.linkedin_url!.startsWith('http') ? contact.linkedin_url! : `https://${contact.linkedin_url}`;
+                                                                        invoke("open_external_url", { url });
+                                                                    }}
+                                                                >
                                                                     <Linkedin className="h-4 w-4" />
                                                                 </Button>
                                                             )}

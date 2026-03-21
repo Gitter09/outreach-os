@@ -144,6 +144,7 @@ pub mod models {
         pub last_interaction_at: Option<DateTime<Utc>>, // kept for history
         pub last_contacted_date: Option<DateTime<Utc>>, // explicit field
         pub next_contact_date: Option<DateTime<Utc>>,
+        pub effective_next_date: Option<DateTime<Utc>>,
         pub next_contact_event: Option<String>,
         pub cadence_stage: Option<i32>,
 

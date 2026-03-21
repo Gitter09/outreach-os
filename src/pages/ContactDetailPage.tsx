@@ -4,7 +4,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { Contact, ContactEvent } from "@/types/crm";
 import { useErrors } from "@/hooks/use-errors";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mail, Calendar, MapPin, Building, Loader2, Sparkles, Briefcase, Copy, RotateCw, MoreHorizontal, Send, Check, Pencil, Trash2, Tag as TagIcon, Plus, X, Clock, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Mail, Linkedin, Calendar, MapPin, Building, Loader2, Sparkles, Briefcase, Copy, RotateCw, MoreHorizontal, Send, Check, Pencil, Trash2, Tag as TagIcon, Plus, X, Clock, RefreshCw } from "lucide-react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/layout/page-header";
 import { formatDistanceToNow, format } from "date-fns";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 
@@ -63,6 +65,8 @@ export function ContactDetailPage() {
     const [summaryDraft, setSummaryDraft] = useState("");
     const [events, setEvents] = useState<ContactEvent[]>([]);
     const [eventsLoading, setEventsLoading] = useState(true);
+    const [activity, setActivity] = useState<ContactEvent[]>([]);
+    const [activityLoading, setActivityLoading] = useState(true);
     const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<ContactEvent | null>(null);
     const [eventTitleDraft, setEventTitleDraft] = useState("");
@@ -93,6 +97,7 @@ export function ContactDetailPage() {
     useEffect(() => {
         fetchContact();
         fetchEvents();
+        fetchActivity();
     }, [id]);
 
     const fetchEvents = async () => {
@@ -105,6 +110,20 @@ export function ContactDetailPage() {
             handleError(err, "Failed to load events");
         } finally {
             setEventsLoading(false);
+        }
+    };
+
+    const fetchActivity = async () => {
+        if (!id) return;
+        setActivityLoading(true);
+        try {
+            const result = await invoke<ContactEvent[]>("get_contact_activity", { contactId: id });
+            setActivity(result);
+        } catch (err) {
+            // Silently fail — activity is non-critical
+            console.error("Failed to load activity:", err);
+        } finally {
+            setActivityLoading(false);
         }
     };
 
@@ -305,6 +324,17 @@ export function ContactDetailPage() {
                                 >
                                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                 </Button>
+                                {contact.linkedin_url && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 text-muted-foreground hover:text-primary transition-colors"
+                                        title="LinkedIn Profile"
+                                        onClick={() => invoke("open_external_url", { url: getWebsiteUrl(contact.linkedin_url!) })}
+                                    >
+                                        <Linkedin className="h-4 w-4" />
+                                    </Button>
+                                )}
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground cursor-pointer" title="More">
@@ -378,9 +408,12 @@ export function ContactDetailPage() {
                                                 <AvatarFallback className="rounded-sm bg-muted text-[10px]">{contact.company[0]}</AvatarFallback>
                                             </Avatar>
                                             {contact.company_website ? (
-                                                <a href={getWebsiteUrl(contact.company_website)} target="_blank" rel="noreferrer" className="truncate underline decoration-dotted underline-offset-2 hover:text-primary cursor-pointer">
+                                                <button 
+                                                    onClick={() => invoke("open_external_url", { url: getWebsiteUrl(contact.company_website!) })}
+                                                    className="truncate underline decoration-dotted underline-offset-2 hover:text-primary cursor-pointer border-none bg-transparent p-0 text-left"
+                                                >
                                                     {contact.company}
-                                                </a>
+                                                </button>
                                             ) : (
                                                 <span className="truncate">{contact.company}</span>
                                             )}
@@ -407,6 +440,72 @@ export function ContactDetailPage() {
                                             }
                                         })()
                                     ) : "Never"}
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between py-2">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground w-1/3">
+                                    <Clock className="h-3 w-3" />
+                                    Next Contact
+                                </div>
+                                <div className="w-2/3 flex justify-start">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <div className="cursor-pointer">
+                                                {contact.next_contact_date ? (
+                                                    <Badge variant="secondary" className="font-normal hover:bg-muted transition-colors px-2 py-0.5 h-6">
+                                                        {format(new Date(contact.next_contact_date), "MMM d, yyyy")}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground hover:text-foreground transition-colors underline decoration-dotted underline-offset-4">
+                                                        Set follow-up
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <CalendarComponent
+                                                mode="single"
+                                                selected={contact.next_contact_date ? new Date(contact.next_contact_date) : undefined}
+                                                onSelect={async (date) => {
+                                                    try {
+                                                        await invoke("update_contact", {
+                                                            args: {
+                                                                id: contact.id,
+                                                                nextContactDate: date ? date.toISOString() : null
+                                                            }
+                                                        });
+                                                        fetchContact();
+                                                        toast.success("Follow-up date updated");
+                                                    } catch (err) {
+                                                        handleError(err, "Failed to update date");
+                                                    }
+                                                }}
+                                                initialFocus
+                                            />
+                                            {contact.next_contact_date && (
+                                                <div className="p-2 border-t flex justify-center">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-xs text-red-500 hover:text-red-600 w-full h-8"
+                                                        onClick={async () => {
+                                                            try {
+                                                                await invoke("clear_contact_next_date", {
+                                                                    id: contact.id
+                                                                });
+                                                                fetchContact();
+                                                                toast.success("Follow-up date cleared");
+                                                            } catch (err) {
+                                                                handleError(err, "Failed to clear date");
+                                                            }
+                                                        }}
+                                                    >
+                                                        Clear Date
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             </div>
                             <div className="flex items-start justify-between py-2 pt-4 border-t mt-2">
@@ -543,38 +642,40 @@ export function ContactDetailPage() {
                                         </CardContent>
                                     </Card>
                                 ) : (
-                                    <div className="space-y-4 flex-1 min-h-[250px]">
-                                        {events.map(event => (
-                                            <Card key={event.id} className="shadow-sm hover:shadow-md transition-shadow group">
-                                                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                                    <CardTitle className="text-sm font-medium truncate pr-8">{event.title}</CardTitle>
-                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEvent(event)}>
-                                                            <Pencil className="h-3 w-3" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteEvent(event.id)}>
-                                                            <Trash2 className="h-3 w-3" />
-                                                        </Button>
-                                                    </div>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                                                        <div className="flex items-center gap-1">
-                                                            <Calendar className="h-3 w-3" />
-                                                            {format(new Date(event.event_at), "MMM d, yyyy")}
+                                    <ScrollArea className="h-[225px]">
+                                        <div className="space-y-4 pr-3 [mask-image:linear-gradient(to_bottom,black_80%,transparent_100%)]">
+                                            {events.map(event => (
+                                                <Card key={event.id} className="shadow-sm hover:shadow-md transition-shadow group">
+                                                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                                                        <CardTitle className="text-sm font-medium truncate pr-8">{event.title}</CardTitle>
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEvent(event)}>
+                                                                <Pencil className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteEvent(event.id)}>
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
                                                         </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <Clock className="h-3 w-3 ml-1" />
-                                                            {format(new Date(event.event_at), "h:mm a")}
+                                                    </CardHeader>
+                                                    <CardContent>
+                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                                            <div className="flex items-center gap-1">
+                                                                <Calendar className="h-3 w-3" />
+                                                                {format(new Date(event.event_at), "MMM d, yyyy")}
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Clock className="h-3 w-3 ml-1" />
+                                                                {format(new Date(event.event_at), "h:mm a")}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    {event.description && (
-                                                        <p className="text-xs text-muted-foreground/80 line-clamp-2">{event.description}</p>
-                                                    )}
-                                                </CardContent>
-                                            </Card>
-                                        ))}
-                                    </div>
+                                                        {event.description && (
+                                                            <p className="text-xs text-muted-foreground/80 line-clamp-2">{event.description}</p>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
                                 )}
                             </section>
 
@@ -635,8 +736,10 @@ export function ContactDetailPage() {
                                                         await invoke("update_contact", {
                                                             args: { id: contact.id, statusId: newId }
                                                         });
-                                                        // Optimistic update
+                                                        // Optimistic UI update
                                                         setContact(prev => prev ? { ...prev, status_id: newId } : null);
+                                                        // Refresh activity tab in real-time
+                                                        fetchActivity();
                                                     }}
                                                     className="h-7"
                                                 />
@@ -734,23 +837,59 @@ export function ContactDetailPage() {
                                     </h2>
                                     <Card className="border shadow-sm">
                                         <div className="divide-y">
-                                            {/* Default Item */}
-                                            {/* In a real app we would map over activity logs here */}
-                                            <div className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
-                                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border shrink-0">
-                                                    <Check className="h-4 w-4 text-muted-foreground" />
+                                            {activityLoading ? (
+                                                <div className="flex justify-center p-8 items-center">
+                                                    <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-foreground">
-                                                        Contact created
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground mt-0.5">{new Date(contact.created_at).toLocaleDateString()}</p>
-                                                </div>
-                                            </div>
-                                            {/* Mock items removed as per user request */}
+                                            ) : (
+                                                <>
+                                                    {activity.length === 0 && (
+                                                        <div className="p-6 text-center">
+                                                            <p className="text-sm text-muted-foreground">
+                                                                Nothing here yet. Change a status or send an email to see activity.
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    {activity.map((event) => {
+                                                        const isEmail = event.title.startsWith("Email sent:") || event.title.startsWith("Email received:") || event.title.startsWith("Email scheduled:");
+                                                        const isStatus = event.title.startsWith("Moved to");
+                                                        const isTag = event.title.startsWith("Tag added:") || event.title.startsWith("Tag removed:");
+                                                        const IconComp = isEmail ? Mail : isStatus ? ArrowRight : isTag ? TagIcon : Calendar;
+                                                        return (
+                                                            <div key={event.id} className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
+                                                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border shrink-0 mt-0.5">
+                                                                    <IconComp className="h-4 w-4 text-muted-foreground" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm text-foreground">{event.title}</p>
+                                                                    {event.description && (
+                                                                        <p className="text-xs text-muted-foreground/80 mt-0.5 line-clamp-2">{event.description}</p>
+                                                                    )}
+                                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                                        {formatDistanceToNow(new Date(event.event_at), { addSuffix: true })}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {/* Sentinel: contact creation — always pinned at the bottom */}
+                                                    <div className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
+                                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border shrink-0 mt-0.5">
+                                                            <Check className="h-4 w-4 text-muted-foreground" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm text-foreground">Contact created</p>
+                                                            <p className="text-xs text-muted-foreground mt-1">
+                                                                {formatDistanceToNow(new Date(contact.created_at), { addSuffix: true })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </Card>
                                 </TabsContent>
+
 
                                 <TabsContent value="emails" className="mt-0">
                                     <Card className="border shadow-sm">
@@ -785,6 +924,7 @@ export function ContactDetailPage() {
                             contact={contact}
                             open={isEmailOpen}
                             onOpenChange={setIsEmailOpen}
+                            onEmailSent={fetchActivity}
                         />
 
                         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

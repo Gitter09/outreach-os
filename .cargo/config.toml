@@ -1,3 +1,7 @@
+[build]
+# Keep build artifacts outside OneDrive to prevent sync timeouts (os error 60).
+target-dir = "/Users/harshitsingh/.cargo/outreachos-target"
+
 [env]
 # Force sqlx to link against libsqlcipher instead of libsqlite3.
 # SQLCipher provides AES-256-CBC page-level encryption for the database file.

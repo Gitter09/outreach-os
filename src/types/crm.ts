@@ -20,6 +20,7 @@ export interface Contact {
 
     last_contacted_date?: string; // ISO string
     next_contact_date?: string;
+    effective_next_date?: string; // Earliest of manual date or next scheduled event
     next_contact_event?: string;
     cadence_stage?: number;
 

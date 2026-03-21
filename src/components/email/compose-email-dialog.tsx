@@ -35,6 +35,7 @@ interface ComposeEmailDialogProps {
     contact: Contact | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onEmailSent?: () => void;
 }
 
 interface EmailAccount {
@@ -47,6 +48,7 @@ export function ComposeEmailDialog({
     contact,
     open,
     onOpenChange,
+    onEmailSent,
 }: ComposeEmailDialogProps) {
     const { handleError } = useErrors();
     const [to, setTo] = useState("");
@@ -146,11 +148,14 @@ export function ComposeEmailDialog({
             } else {
                 await invoke("email_send", {
                     accountId: selectedAccount,
+                    contactId: contact?.id ?? null,
                     to,
                     subject,
                     body
                 });
                 toast.success("Email sent successfully!");
+                onEmailSent?.();
+
             }
             onOpenChange(false);
             setSubject("");

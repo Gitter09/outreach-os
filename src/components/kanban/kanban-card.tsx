@@ -60,10 +60,10 @@ export function KanbanCard({ contact, onClick }: KanbanCardProps) {
                     </p>
 
                     {/* Tiny badges or indicators could go here */}
-                    {contact.next_contact_date && (
+                    {contact.effective_next_date && (
                         <div className="flex items-center gap-1 mt-2">
                             <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                                Next: {new Date(contact.next_contact_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                Next: {new Date(contact.effective_next_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             </span>
                         </div>
                     )}
