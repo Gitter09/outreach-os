@@ -7,8 +7,10 @@ import { ShieldCheck, Lock, Key, Trash2, ShieldAlert, Eye, EyeOff } from "lucide
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
+import { useErrors } from "@/hooks/use-errors";
 
 export function SecuritySettingsTab() {
+    const { handleError } = useErrors();
     const [hasPin, setHasPin] = useState<boolean | null>(null);
     const [showPinDialog, setShowPinDialog] = useState(false);
     const [pin, setPin] = useState("");
@@ -26,8 +28,7 @@ export function SecuritySettingsTab() {
             const status = await invoke<boolean>("has_lock_pin");
             setHasPin(status);
         } catch (error) {
-            console.error("Failed to check PIN status:", error);
-            toast.error("Security system error: Failed to access keychain");
+            handleError(error, "Security system error: Failed to access keychain");
             setHasPin(false);
         }
     };
@@ -55,7 +56,7 @@ export function SecuritySettingsTab() {
             setConfirmPin("");
             toast.success("App lock PIN configured successfully");
         } catch (error) {
-            toast.error(error as string || "Failed to set PIN");
+            handleError(error, "Failed to set PIN");
         } finally {
             setLoading(false);
         }
@@ -94,7 +95,7 @@ export function SecuritySettingsTab() {
                 setReAuthError(true);
             }
         } catch (error) {
-            toast.error("Security system error while verifying PIN");
+            handleError(error, "Security system error while verifying PIN");
         } finally {
             setReAuthLoading(false);
         }
@@ -106,7 +107,7 @@ export function SecuritySettingsTab() {
             setHasPin(false);
             toast.success("App lock disabled");
         } catch (error) {
-            toast.error(error as string || "Failed to remove PIN");
+            handleError(error, "Failed to remove PIN");
         }
     };
 

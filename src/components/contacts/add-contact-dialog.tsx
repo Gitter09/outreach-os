@@ -281,8 +281,7 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
                             />
                         </div>
 
-                        {!initialStatusId && (
-                            <div className="space-y-2">
+                        <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
                                 {isCreatingNewStatus ? (
                                     <div className="space-y-3">
@@ -372,7 +371,6 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
                                     </Select>
                                 )}
                             </div>
-                        )}
                     </div>
 
                     <DialogFooter>

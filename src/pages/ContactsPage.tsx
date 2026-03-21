@@ -12,7 +12,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, RefreshCcw, Mail, Linkedin, Trash2, Search, ListFilter, LayoutList, Columns } from "lucide-react";
+import { UserPlus, RefreshCcw, Mail, Linkedin, Trash2, Search, ListFilter, LayoutList, Columns, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,6 +45,10 @@ import { ManageTagsDialog } from "@/components/tags/manage-tags-dialog";
 import { useTags } from "@/hooks/use-tags";
 import { useErrors } from "@/hooks/use-errors";
 
+// Module-level flag: ensures the token-expired toast fires at most once per app session,
+// even if ContactsPage re-mounts on navigation.
+let tokenExpiredToastShown = false;
+
 export function ContactsPage() {
     const navigate = useNavigate();
     const { handleError } = useErrors();
@@ -52,16 +57,18 @@ export function ContactsPage() {
     const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
     const [loading, setLoading] = useState(true);
 
-    const { setCommandOpen, setAddContactOpen, setImportOpen, refreshTrigger } = useOutletContext<{
+    const { setCommandOpen, setAddContactOpen, setImportOpen, refreshTrigger, setNewContactStatusId } = useOutletContext<{
         setCommandOpen: (open: boolean) => void;
         setAddContactOpen: (open: boolean) => void;
         setImportOpen: (open: boolean) => void;
         refreshTrigger: number;
+        setNewContactStatusId: (id: string | undefined) => void;
     }>();
 
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isBulkUpdatingStatus, setIsBulkUpdatingStatus] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [tagFilter, setTagFilter] = useState<string>("all");
@@ -139,8 +146,24 @@ export function ContactsPage() {
         }
     };
 
+    const handleBulkStatusChange = async (statusId: string) => {
+        setIsBulkUpdatingStatus(true);
+        try {
+            const count = selectedIds.size;
+            await invoke("update_contacts_status_bulk", { ids: Array.from(selectedIds), status_id: statusId });
+            const statusLabel = statuses.find(s => s.id === statusId)?.label ?? "new status";
+            setSelectedIds(new Set());
+            fetchContacts();
+            toast.success(`${count} ${count === 1 ? "contact" : "contacts"} moved to ${statusLabel}.`);
+        } catch (error) {
+            handleError(error, "Failed to update status");
+        } finally {
+            setIsBulkUpdatingStatus(false);
+        }
+    };
+
     const handleContactClick = (contact: Contact) => {
-        navigate(`/contact/${contact.id}`);
+        navigate(`/people/${contact.id}`);
     };
 
     async function fetchContacts() {
@@ -175,7 +198,8 @@ export function ContactsPage() {
         }
     };
 
-    const handleOpenAddContact = () => {
+    const handleOpenAddContact = (statusId?: string) => {
+        setNewContactStatusId(statusId);
         setAddContactOpen(true);
     };
 
@@ -198,7 +222,8 @@ export function ContactsPage() {
                 }>>("sync_email_accounts");
 
                 const expired = results.filter((r) => r.token_expired).map((r) => r.account_email);
-                if (expired.length > 0) {
+                if (expired.length > 0 && !tokenExpiredToastShown) {
+                    tokenExpiredToastShown = true;
                     handleError(`Email token expired for: ${expired.join(", ")}. Go to Settings → Email to reconnect.`);
                 }
             } catch (err) {
@@ -211,7 +236,7 @@ export function ContactsPage() {
     return (
         <div className="flex flex-col h-full relative">
             <PageHeader
-                title="Contacts"
+                title="People"
                 onSearchClick={() => setCommandOpen(true)}
             >
                 <Button variant="outline" size="sm" onClick={fetchContacts}>
@@ -228,7 +253,7 @@ export function ContactsPage() {
                 <Card className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
                     <CardHeader>
                         <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg font-medium">Contacts</CardTitle>
+                            <CardTitle className="text-lg font-medium">People</CardTitle>
                             <div className="flex gap-2 w-full max-w-lg">
                                 <div className="relative flex-1">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -326,7 +351,7 @@ export function ContactsPage() {
                                     <div className="space-y-2">
                                         <h3 className="font-semibold text-xl">No contacts yet</h3>
                                         <p className="text-muted-foreground max-w-sm">
-                                            Start by adding a contact manually or use Clipboard Intelligence (Trigger Cmd+K).
+                                            Add your first contact to get started — paste in a LinkedIn profile, import a CSV, or type it in manually.
                                         </p>
                                     </div>
                                     <Button size="lg" onClick={() => handleOpenAddContact()}>
@@ -466,6 +491,35 @@ export function ContactsPage() {
                 <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground border shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-10 fade-in duration-300 z-50">
                     <span className="text-sm font-medium">{selectedIds.size} selected</span>
                     <div className="h-4 w-px bg-border" />
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="rounded-full"
+                                disabled={isBulkUpdatingStatus}
+                            >
+                                Change Status
+                                <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" side="top">
+                            <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {statuses.map((status) => (
+                                <DropdownMenuItem
+                                    key={status.id}
+                                    onSelect={() => handleBulkStatusChange(status.id)}
+                                >
+                                    <div
+                                        className="h-2 w-2 rounded-full mr-2 shrink-0"
+                                        style={{ backgroundColor: getColorHex(status.color) }}
+                                    />
+                                    {status.label}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                         variant="destructive"
                         size="sm"

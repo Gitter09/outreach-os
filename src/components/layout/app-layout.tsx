@@ -10,6 +10,7 @@ export function AppLayout() {
     const [addContactOpen, setAddContactOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [newContactStatusId, setNewContactStatusId] = useState<string | undefined>(undefined);
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -43,7 +44,8 @@ export function AppLayout() {
                     importOpen,
                     setImportOpen,
                     refreshTrigger,
-                    handleRefresh
+                    handleRefresh,
+                    setNewContactStatusId,
                 }} />
             </main>
 
@@ -54,13 +56,17 @@ export function AppLayout() {
                 onContactsChanged={handleRefresh}
                 onOpenImport={() => setImportOpen(true)}
                 onOpenAddContact={() => setAddContactOpen(true)}
-                onSelectContact={(id) => navigate(`/contact/${id}`)}
+                onSelectContact={(id) => navigate(`/people/${id}`)}
                 onOpenSettings={() => navigate("/settings")}
             />
             <AddContactDialog
                 open={addContactOpen}
-                onOpenChange={setAddContactOpen}
+                onOpenChange={(open) => {
+                    setAddContactOpen(open);
+                    if (!open) setNewContactStatusId(undefined);
+                }}
                 onContactAdded={handleRefresh}
+                initialStatusId={newContactStatusId}
             />
             <ImportDialog
                 open={importOpen}

@@ -3,12 +3,14 @@ import { Shield, Lock, Delete, Check } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useErrors } from "@/hooks/use-errors";
 
 interface LockScreenProps {
     onUnlock: () => void;
 }
 
 export function LockScreen({ onUnlock }: LockScreenProps) {
+    const { handleError } = useErrors();
     const [pin, setPin] = useState("");
     const [error, setError] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -39,8 +41,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
                 toast.error("Invalid PIN");
             }
         } catch (err) {
-            console.error("Verification error:", err);
-            toast.error("Security system error");
+            handleError(err, "Security system error");
         } finally {
             setLoading(false);
         }

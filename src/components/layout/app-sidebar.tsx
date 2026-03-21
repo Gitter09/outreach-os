@@ -14,6 +14,8 @@ import {
     Palette,
     Database,
     LayoutTemplate,
+    CheckSquare,
+    Info,
 } from "lucide-react";
 import {
     Tooltip,
@@ -28,11 +30,14 @@ interface NavItem {
     label: string;
     icon: React.ElementType;
     path: string;
+    soon?: boolean;
 }
 
 const mainNavItems: NavItem[] = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-    { label: "Contacts", icon: Users, path: "/contacts" },
+    { label: "People", icon: Users, path: "/people" },
+    { label: "Emails", icon: Mail, path: "/emails", soon: true },
+    { label: "Tasks", icon: CheckSquare, path: "/tasks", soon: true },
     { label: "Templates", icon: FileText, path: "/templates" },
 ];
 
@@ -42,6 +47,7 @@ const settingsSubItems: NavItem[] = [
     { label: "Pipeline", icon: LayoutTemplate, path: "/settings/pipeline" },
     { label: "Security", icon: Shield, path: "/settings/security" },
     { label: "Data", icon: Database, path: "/settings/data" },
+    { label: "About", icon: Info, path: "/settings/about" },
 ];
 
 function OutreachMark({ className }: { className?: string }) {
@@ -71,7 +77,7 @@ export function AppSidebar() {
 
     const isActive = (path: string) => {
         if (path === "/") return location.pathname === "/";
-        if (path === "/contacts") return location.pathname === "/contacts" || location.pathname.startsWith("/contact/");
+        if (path === "/people") return location.pathname === "/people" || location.pathname.startsWith("/people/");
         return location.pathname.startsWith(path);
     };
 
@@ -117,7 +123,7 @@ export function AppSidebar() {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
-                                    onClick={() => navigate("/contacts")}
+                                    onClick={() => navigate("/people")}
                                     className={cn(
                                         "w-full flex items-center gap-2 px-2 py-1.5 text-sm font-medium rounded-md transition-colors",
                                         "text-muted-foreground hover:text-foreground hover:bg-muted",
@@ -154,12 +160,21 @@ export function AppSidebar() {
                                     "w-full flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-md transition-all border",
                                     active
                                         ? "bg-primary/10 text-primary border-primary/20"
+                                        : item.soon
+                                        ? "text-muted-foreground/60 border-transparent hover:text-muted-foreground hover:bg-muted"
                                         : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted",
                                     collapsed && "justify-center px-0"
                                 )}
                             >
                                 <Icon className="h-4 w-4 shrink-0" />
-                                {!collapsed && <span>{item.label}</span>}
+                                {!collapsed && (
+                                    <>
+                                        <span className="flex-1">{item.label}</span>
+                                        {item.soon && (
+                                            <span className="text-[10px] text-muted-foreground/50 font-medium">Soon</span>
+                                        )}
+                                    </>
+                                )}
                             </button>
                         );
 

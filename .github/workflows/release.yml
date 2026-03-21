@@ -64,6 +64,24 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
+      - name: Verify changelog is up to date
+        shell: bash
+        run: |
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('src/changelog.ts', 'utf8');
+            const match = content.match(/version:\s*['\"]([^'\"]+)['\"]/)
+            const version = match ? match[1] : null;
+            const tag = process.env.GITHUB_REF_NAME.replace(/^v/, '');
+            if (version !== tag) {
+              console.error('changelog.ts version (' + version + ') does not match release tag (' + tag + '). Add a new entry to src/changelog.ts before releasing.');
+              process.exit(1);
+            }
+            console.log('Changelog version matches tag:', version);
+          "
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
       - name: Build Tauri App and Create Release
         uses: tauri-apps/tauri-action@v0
         env:

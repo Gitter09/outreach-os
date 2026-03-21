@@ -323,9 +323,9 @@ export function ContactDetailPage() {
                 <PageHeader
                     onSearchClick={() => setCommandOpen(true)}
                     leftActions={
-                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => navigate("/contacts")}>
+                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => navigate("/people")}>
                             <ArrowLeft className="h-4 w-4" />
-                            Back to Contacts
+                            Back to People
                         </Button>
                     }
                 />

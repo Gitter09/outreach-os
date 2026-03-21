@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Mail, Calendar, Loader2, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import { useErrors } from "@/hooks/use-errors";
 import { ScheduledEmail } from "@/types/crm";
 import { format, isPast } from "date-fns";
@@ -23,6 +23,7 @@ import {
 
 export function EmailsPage() {
     const { setCommandOpen } = useOutletContext<{ setCommandOpen: (open: boolean) => void }>();
+    const navigate = useNavigate();
     const { handleError } = useErrors();
     const [scheduled, setScheduled] = useState<ScheduledEmail[]>([]);
     const [loading, setLoading] = useState(true);
@@ -140,10 +141,13 @@ export function EmailsPage() {
                     <Card className="border-dashed">
                         <CardContent className="flex flex-col items-center justify-center py-14 text-center">
                             <Mail className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                            <h3 className="text-base font-medium">Inbox coming soon</h3>
-                            <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                                A unified inbox for all your connected email accounts will appear here.
+                            <h3 className="text-base font-medium">Real email sync is coming.</h3>
+                            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                                In the meantime, email threads live on each contact's page.
                             </p>
+                            <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/people")}>
+                                Go to People
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>

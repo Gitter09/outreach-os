@@ -82,8 +82,8 @@ function App() {
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
-            <Route path="/contacts" element={<ContactsPage />} />
-            <Route path="/contact/:id" element={<ContactDetailPage />} />
+            <Route path="/people" element={<ContactsPage />} />
+            <Route path="/people/:id" element={<ContactDetailPage />} />
             <Route path="/emails" element={<EmailsPage />} />
             <Route path="/notes" element={<NotesPage />} />
             <Route path="/tasks" element={<TasksPage />} />
@@ -92,7 +92,7 @@ function App() {
             <Route path="/settings/:tab" element={<SettingsPage />} />
           </Route>
         </Routes>
-        <Toaster />
+        <Toaster closeButton duration={2000} />
       </Router>
     </ErrorBoundary>
   );

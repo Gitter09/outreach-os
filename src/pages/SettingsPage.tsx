@@ -3,11 +3,11 @@ import { useErrors } from "@/hooks/use-errors";
 import { useParams, useNavigate } from "react-router-dom";
 import { EmailSettingsTab } from "@/components/settings/email-settings-tab";
 import { SecuritySettingsTab } from "@/components/settings/security-settings-tab";
+import { AboutTab } from "@/components/settings/about-tab";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
-    CheckCircle2,
     Sun,
     Moon,
     Monitor,
@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { PageHeader } from "@/components/layout/page-header";
 
-type SettingsTab = "email" | "appearance" | "pipeline" | "data" | "security";
+type SettingsTab = "email" | "appearance" | "pipeline" | "data" | "security" | "about";
 
 const tabTitles: Record<SettingsTab, string> = {
     email: "Email Integration",
@@ -27,6 +27,7 @@ const tabTitles: Record<SettingsTab, string> = {
     pipeline: "Pipeline",
     data: "Data",
     security: "Security",
+    about: "About",
 };
 
 export function SettingsPage() {
@@ -92,62 +93,6 @@ export function SettingsPage() {
                 </div>
             </div>
 
-            {/* Accent Color */}
-            <div className="space-y-4">
-                <Label className="text-sm font-semibold">Accent Color</Label>
-                <div className="flex flex-wrap gap-3">
-                    {[
-                        { name: "Neutral", hex: "#222326" },
-                        { name: "Blue", hex: "#3b82f6" },
-                        { name: "Green", hex: "#22c55e" },
-                        { name: "Purple", hex: "#a855f7" },
-                        { name: "Orange", hex: "#f97316" },
-                        { name: "Pink", hex: "#ec4899" },
-                        { name: "Indigo", hex: "#6366f1" },
-                        { name: "Red", hex: "#ef4444" },
-                    ].map((color) => (
-                        <button
-                            key={color.hex}
-                            onClick={() => handleSettingChange("theme_color", color.hex)}
-                            className={cn(
-                                "w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center",
-                                settings["theme_color"] === color.hex
-                                    ? "border-foreground scale-110 shadow-md"
-                                    : "border-transparent hover:scale-105"
-                            )}
-                            style={{ backgroundColor: color.hex }}
-                            title={color.name}
-                        >
-                            {settings["theme_color"] === color.hex && (
-                                <CheckCircle2 className="h-4 w-4 text-white drop-shadow-sm" />
-                            )}
-                        </button>
-                    ))}
-
-                    {/* Custom Color Input */}
-                    <div className="relative">
-                        <button
-                            className={cn(
-                                "w-10 h-10 rounded-full border-2 transition-all bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500",
-                                ![
-                                    "#222326", "#3b82f6", "#22c55e", "#a855f7", "#f97316", "#ec4899", "#6366f1", "#ef4444"
-                                ].includes(settings["theme_color"] || "#222326")
-                                    ? "border-foreground scale-110"
-                                    : "border-transparent"
-                            )}
-                            onClick={() => (document.getElementById("custom-accent-color") as HTMLInputElement)?.click()}
-                        />
-                        <input
-                            id="custom-accent-color"
-                            type="color"
-                            className="absolute inset-0 opacity-0 pointer-events-none"
-                            value={settings["theme_color"] || "#222326"}
-                            onChange={(e) => handleSettingChange("theme_color", e.target.value)}
-                        />
-                    </div>
-                </div>
-                <p className="text-xs text-muted-foreground">Choose a primary color for buttons, highlights, and active states.</p>
-            </div>
         </div>
     );
 
@@ -242,6 +187,7 @@ export function SettingsPage() {
             case "pipeline": return <div className="p-4 text-muted-foreground">Pipeline configuration coming soon.</div>;
             case "data": return renderDataContent();
             case "security": return <SecuritySettingsTab />;
+            case "about": return <AboutTab />;
             default: return renderAppearanceContent();
         }
     };

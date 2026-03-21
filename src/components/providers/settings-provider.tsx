@@ -12,7 +12,6 @@ export interface Settings {
 
     // Appearance
     theme_mode?: "light" | "dark" | "system";
-    theme_color?: string;
 
     // CRM
     default_status_id?: string;

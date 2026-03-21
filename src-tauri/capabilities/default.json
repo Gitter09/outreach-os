@@ -15,6 +15,12 @@
         },
         {
           "url": "https://login.microsoftonline.com/*"
+        },
+        {
+          "url": "https://github.com/*"
+        },
+        {
+          "url": "https://linkedin.com/*"
         }
       ]
     },
