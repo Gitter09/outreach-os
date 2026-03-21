@@ -5,7 +5,7 @@ import { Contact, ContactEvent, ContactFile } from "@/types/crm";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { useErrors } from "@/hooks/use-errors";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Mail, Linkedin, Calendar, MapPin, Building, Loader2, Sparkles, Briefcase, Copy, MoreHorizontal, Send, Check, Pencil, Trash2, Tag as TagIcon, Plus, X, Clock, RefreshCw, Paperclip, FileIcon, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight, Mail, Linkedin, Calendar, MapPin, Building, Loader2, Sparkles, Briefcase, Copy, MoreHorizontal, Send, Check, Pencil, Trash2, Tag as TagIcon, Plus, X, Clock, RefreshCw, Paperclip, FileIcon, ExternalLink, User } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -406,17 +406,17 @@ export function ContactDetailPage() {
                         <div className="space-y-1">
                             <div className="flex items-center justify-between py-2">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground w-1/3">
-                                    <Briefcase className="h-3 w-3" />
+                                    <User className="h-3 w-3" />
                                     Name
                                 </div>
                                 <div className="text-sm font-medium w-2/3 truncate">{contact.first_name} {contact.last_name}</div>
                             </div>
                             <div className="flex items-center justify-between py-2">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground w-1/3">
-                                    <Briefcase className="h-3 w-3" />
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 w-[7rem]">
+                                    <Briefcase className="h-3 w-3 shrink-0" />
                                     Description
                                 </div>
-                                <div className="text-sm w-2/3 truncate" title={`${contact.title || ""} at ${contact.company || ""}`}>
+                                <div className="text-sm flex-1 min-w-0 truncate" title={`${contact.title || ""} at ${contact.company || ""}`}>
                                     {contact.title && contact.company ? `${contact.title} at ${contact.company}` : (contact.title || contact.company || "-")}
                                 </div>
                             </div>
