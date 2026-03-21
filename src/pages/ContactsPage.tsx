@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuCheckboxItem,
     DropdownMenuLabel,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
@@ -72,7 +73,7 @@ export function ContactsPage() {
     const [isBulkUpdatingStatus, setIsBulkUpdatingStatus] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
-    const [tagFilter, setTagFilter] = useState<string>("all");
+    const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
     const [manageTagsOpen, setManageTagsOpen] = useState(false);
     const { tags: availableTags } = useTags();
 
@@ -102,7 +103,8 @@ export function ContactsPage() {
             statusFilter === "all" || (contact.status_id || "stat-new") === statusFilter;
 
         const matchesTag =
-            tagFilter === "all" || (contact.tags && contact.tags.some(t => t.id === tagFilter));
+            tagFilters.size === 0 ||
+            (contact.tags && contact.tags.some(t => tagFilters.has(t.id)));
 
         return matchesSearch && matchesStatus && matchesTag;
     }).sort((a, b) => {
@@ -334,6 +336,11 @@ export function ContactsPage() {
                                             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                                                 Filter & Sort
                                             </span>
+                                            {tagFilters.size > 0 && (
+                                                <span className="ml-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium h-4 w-4 flex items-center justify-center">
+                                                    {tagFilters.size}
+                                                </span>
+                                            )}
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-[200px]">
@@ -348,19 +355,40 @@ export function ContactsPage() {
                                             ))}
                                         </DropdownMenuRadioGroup>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuLabel>Filter by Tags</DropdownMenuLabel>
+                                        <div className="flex items-center justify-between px-2 py-1.5">
+                                            <span className="text-xs font-semibold text-muted-foreground">Filter by Tags</span>
+                                            {tagFilters.size > 0 && (
+                                                <button
+                                                    className="text-xs text-primary hover:underline"
+                                                    onClick={(e) => { e.preventDefault(); setTagFilters(new Set()); }}
+                                                >
+                                                    Clear
+                                                </button>
+                                            )}
+                                        </div>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuRadioGroup value={tagFilter} onValueChange={setTagFilter}>
-                                            <DropdownMenuRadioItem value="all">All Tags</DropdownMenuRadioItem>
-                                            {availableTags.map((tag) => (
-                                                <DropdownMenuRadioItem key={tag.id} value={tag.id}>
+                                        {availableTags.length === 0 ? (
+                                            <div className="px-2 py-1.5 text-xs text-muted-foreground">No tags yet</div>
+                                        ) : (
+                                            availableTags.map((tag) => (
+                                                <DropdownMenuCheckboxItem
+                                                    key={tag.id}
+                                                    checked={tagFilters.has(tag.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        setTagFilters(prev => {
+                                                            const next = new Set(prev);
+                                                            checked ? next.add(tag.id) : next.delete(tag.id);
+                                                            return next;
+                                                        });
+                                                    }}
+                                                >
                                                     <div className="flex items-center gap-2">
                                                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
                                                         {tag.name}
                                                     </div>
-                                                </DropdownMenuRadioItem>
-                                            ))}
-                                        </DropdownMenuRadioGroup>
+                                                </DropdownMenuCheckboxItem>
+                                            ))
+                                        )}
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setManageTagsOpen(true); }}>
                                             <ListFilter className="mr-2 h-4 w-4" />

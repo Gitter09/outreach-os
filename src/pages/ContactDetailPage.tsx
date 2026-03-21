@@ -82,7 +82,7 @@ export function ContactDetailPage() {
     const { setCommandOpen } = useOutletContext<{ setCommandOpen: (open: boolean) => void }>();
     const { statuses } = useStatuses();
 
-    const { tags: availableTags, assignTag, unassignTag } = useTags();
+    const { tags: availableTags, assignTag, unassignTag, fetchTags } = useTags();
     const { handleError } = useErrors();
 
     // Fetch Contact
@@ -550,8 +550,13 @@ export function ContactDetailPage() {
                                                 className="cursor-pointer hover:bg-muted-foreground/10 rounded-full h-3.5 w-3.5 flex items-center justify-center transition-colors"
                                                 onClick={async (e) => {
                                                     e.stopPropagation();
-                                                    await unassignTag(contact.id, tag.id);
-                                                    fetchContact();
+                                                    try {
+                                                        await unassignTag(contact.id, tag.id);
+                                                        fetchContact();
+                                                        fetchActivity();
+                                                    } catch (err) {
+                                                        handleError(err, "Failed to remove tag");
+                                                    }
                                                 }}
                                             >
                                                 <X className="h-2.5 w-2.5" />
@@ -565,23 +570,36 @@ export function ContactDetailPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="w-[180px]">
-                                            {availableTags.filter(t => !contact.tags?.some(ct => ct.id === t.id)).length === 0 ? (
-                                                <div className="p-2 text-xs text-muted-foreground text-center">No more tags</div>
+                                            {availableTags.length === 0 ? (
+                                                <div className="p-2 text-xs text-muted-foreground text-center">No tags yet</div>
                                             ) : (
-                                                availableTags.filter(t => !contact.tags?.some(ct => ct.id === t.id)).map(tag => (
-                                                    <DropdownMenuItem
-                                                        key={tag.id}
-                                                        onClick={async () => {
-                                                            await assignTag(contact.id, tag.id);
-                                                            fetchContact();
-                                                        }}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                                                            {tag.name}
-                                                        </div>
-                                                    </DropdownMenuItem>
-                                                ))
+                                                availableTags.map(tag => {
+                                                    const isAssigned = contact.tags?.some(ct => ct.id === tag.id);
+                                                    return (
+                                                        <DropdownMenuItem
+                                                            key={tag.id}
+                                                            onClick={async () => {
+                                                                try {
+                                                                    if (isAssigned) {
+                                                                        await unassignTag(contact.id, tag.id);
+                                                                    } else {
+                                                                        await assignTag(contact.id, tag.id);
+                                                                    }
+                                                                    fetchContact();
+                                                                    fetchActivity();
+                                                                } catch (err) {
+                                                                    handleError(err, isAssigned ? "Failed to remove tag" : "Failed to add tag");
+                                                                }
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                                                                <span className="flex-1">{tag.name}</span>
+                                                                {isAssigned && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+                                                            </div>
+                                                        </DropdownMenuItem>
+                                                    );
+                                                })
                                             )}
                                             <div className="h-px bg-border my-1" />
                                             <DropdownMenuItem onClick={() => setIsManageTagsOpen(true)}>
@@ -961,6 +979,7 @@ export function ContactDetailPage() {
                         <ManageTagsDialog
                             open={isManageTagsOpen}
                             onOpenChange={setIsManageTagsOpen}
+                            onTagsChanged={() => { fetchTags(); fetchContact(); }}
                         />
 
                         <ComposeEmailDialog
