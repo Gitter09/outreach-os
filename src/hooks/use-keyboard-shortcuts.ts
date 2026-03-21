@@ -48,11 +48,12 @@ export function useKeyboardShortcuts(actions: ShortcutActionMap): void {
             // Skip when typing in an input
             if (isInInput(e.target)) return;
 
-            // Skip all shortcuts when on /settings routes (capture mode coexistence)
-            if (location.pathname.startsWith("/settings")) return;
-
             for (const { def, binding } of effectiveBindings) {
                 if (!matchesCombo(e, binding)) continue;
+
+                // Block all shortcuts on /settings routes (capture mode coexistence),
+                // except command_palette which should work everywhere
+                if (location.pathname.startsWith("/settings") && def.id !== "command_palette") continue;
 
                 e.preventDefault();
 

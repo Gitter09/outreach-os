@@ -145,7 +145,7 @@ export function AppLayout() {
                 onOpenImport={() => setImportOpen(true)}
                 onOpenAddContact={() => setAddContactOpen(true)}
                 onSelectContact={(id) => navigate(`/people/${id}`)}
-                onOpenSettings={() => navigate("/settings")}
+                onNavigateTo={(path) => navigate(path)}
             />
             <AddContactDialog
                 open={addContactOpen}

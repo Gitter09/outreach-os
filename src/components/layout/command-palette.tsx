@@ -10,13 +10,28 @@ import {
 } from "@/components/ui/command";
 import {
     Users,
-    Mail,
-    Settings,
     FileSpreadsheet,
+    Palette,
+    PlugZap,
+    Kanban,
+    Database,
+    Shield,
+    Keyboard,
+    Info,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { Contact } from "@/types/crm";
 import { useErrors } from "@/hooks/use-errors";
+
+const SETTINGS_DESTINATIONS = [
+    { id: "appearance", label: "Appearance",         hint: "Theme & display",        icon: Palette,   path: "/settings/appearance" },
+    { id: "email",      label: "Email Integration",  hint: "Gmail · Outlook",        icon: PlugZap,   path: "/settings/email" },
+    { id: "pipeline",   label: "Pipeline",           hint: "Stages & statuses",      icon: Kanban,    path: "/settings/pipeline" },
+    { id: "security",   label: "Security",           hint: "Encryption & password",  icon: Shield,    path: "/settings/security" },
+    { id: "keyboard",   label: "Keyboard Shortcuts", hint: "Customize bindings",     icon: Keyboard,  path: "/settings/keyboard" },
+    { id: "data",       label: "Data",               hint: "Export · factory reset", icon: Database,  path: "/settings/data" },
+    { id: "about",      label: "About",              hint: "Version & release notes",icon: Info,      path: "/settings/about" },
+] as const;
 
 interface CommandPaletteProps {
     open: boolean;
@@ -25,10 +40,10 @@ interface CommandPaletteProps {
     onOpenImport?: () => void;
     onOpenAddContact?: () => void;
     onSelectContact?: (id: string) => void;
-    onOpenSettings?: () => void;
+    onNavigateTo?: (path: string) => void;
 }
 
-export function CommandPalette({ open, onOpenChange, onOpenImport, onOpenAddContact, onSelectContact, onOpenSettings }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, onOpenImport, onOpenAddContact, onSelectContact, onNavigateTo }: CommandPaletteProps) {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const { handleError } = useErrors();
 
@@ -51,11 +66,11 @@ export function CommandPalette({ open, onOpenChange, onOpenImport, onOpenAddCont
             const id = action.replace("view_contact_", "");
             onOpenChange(false);
             onSelectContact?.(id);
-        } else if (action === "navigate_settings") {
+        } else if (action.startsWith("navigate_settings_")) {
+            const path = action.replace("navigate_settings_", "");
             onOpenChange(false);
-            onOpenSettings?.();
+            onNavigateTo?.(path);
         } else {
-            // e.g. navigate_...
             onOpenChange(false);
         }
     };
@@ -100,22 +115,20 @@ export function CommandPalette({ open, onOpenChange, onOpenImport, onOpenAddCont
                     </CommandGroup>
                 )}
 
-                <CommandGroup heading="Navigation">
-                    <CommandItem
-                        onSelect={() => handleAction("navigate_sent")}
-                        onPointerDown={(e) => e.preventDefault()}
-                    >
-                        <Mail className="mr-2 h-4 w-4" />
-                        <span>Sent Campaigns</span>
-                    </CommandItem>
-                    <CommandItem
-                        onSelect={() => handleAction("navigate_settings")}
-                        onPointerDown={(e) => e.preventDefault()}
-                    >
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
-                    </CommandItem>
+                <CommandGroup heading="Settings">
+                    {SETTINGS_DESTINATIONS.map(({ id, label, hint, icon: Icon, path }) => (
+                        <CommandItem
+                            key={id}
+                            onSelect={() => handleAction(`navigate_settings_${path}`)}
+                            onPointerDown={(e) => e.preventDefault()}
+                        >
+                            <Icon className="mr-2 h-4 w-4" />
+                            <span>{label}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{hint}</span>
+                        </CommandItem>
+                    ))}
                 </CommandGroup>
+
             </CommandList>
 
             <div className="flex items-center justify-between border-t border-t-accent px-4 py-2 bg-muted/30">
