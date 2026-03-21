@@ -16,6 +16,7 @@ import {
     LayoutTemplate,
     CheckSquare,
     Info,
+    Keyboard,
 } from "lucide-react";
 import {
     Tooltip,
@@ -43,6 +44,7 @@ const mainNavItems: NavItem[] = [
 
 const settingsSubItems: NavItem[] = [
     { label: "Appearance", icon: Palette, path: "/settings/appearance" },
+    { label: "Keyboard", icon: Keyboard, path: "/settings/keyboard" },
     { label: "Email Integration", icon: Mail, path: "/settings/email" },
     { label: "Pipeline", icon: LayoutTemplate, path: "/settings/pipeline" },
     { label: "Security", icon: Shield, path: "/settings/security" },

@@ -35,8 +35,10 @@ export function EditTemplateDialog({
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
 
-    // We need a ref to the textarea to get the cursor position
+    // Refs and focus tracking for variable insertion into the correct field
+    const subjectRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [focusedField, setFocusedField] = useState<"subject" | "body">("body");
 
     const AVAILABLE_VARIABLES = ["first_name", "last_name", "company", "title", "location"];
 
@@ -55,21 +57,31 @@ export function EditTemplateDialog({
     }, [open, template]);
 
     const insertVariable = (variable: string) => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
         const textToInsert = `{{${variable}}}`;
 
-        const newBody = body.substring(0, start) + textToInsert + body.substring(end);
-        setBody(newBody);
-
-        // Reset focus and cursor position after React re-renders
-        setTimeout(() => {
-            textarea.focus();
-            textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
-        }, 0);
+        if (focusedField === "subject") {
+            const input = subjectRef.current;
+            if (!input) return;
+            const start = input.selectionStart ?? subject.length;
+            const end = input.selectionEnd ?? subject.length;
+            const newSubject = subject.substring(0, start) + textToInsert + subject.substring(end);
+            setSubject(newSubject);
+            setTimeout(() => {
+                input.focus();
+                input.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
+            }, 0);
+        } else {
+            const textarea = textareaRef.current;
+            if (!textarea) return;
+            const start = textarea.selectionStart ?? body.length;
+            const end = textarea.selectionEnd ?? body.length;
+            const newBody = body.substring(0, start) + textToInsert + body.substring(end);
+            setBody(newBody);
+            setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
+            }, 0);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -123,9 +135,11 @@ export function EditTemplateDialog({
                         <Label htmlFor="subject">Default Subject</Label>
                         <Input
                             id="subject"
+                            ref={subjectRef}
                             placeholder="e.g., Question about {{company}}"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
+                            onFocus={() => setFocusedField("subject")}
                             disabled={isLoading}
                             autoCorrect="off"
                             autoCapitalize="off"
@@ -141,6 +155,7 @@ export function EditTemplateDialog({
                             placeholder="Write your template here..."
                             value={body}
                             onChange={(e) => setBody(e.target.value)}
+                            onFocus={() => setFocusedField("body")}
                             disabled={isLoading}
                             rows={10}
                             autoCorrect="off"

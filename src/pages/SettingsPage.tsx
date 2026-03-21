@@ -5,6 +5,7 @@ import { EmailSettingsTab } from "@/components/settings/email-settings-tab";
 import { SecuritySettingsTab } from "@/components/settings/security-settings-tab";
 import { AboutTab } from "@/components/settings/about-tab";
 import { PipelineSettingsTab } from "@/components/settings/pipeline-settings-tab";
+import { KeyboardSettingsTab } from "@/components/settings/keyboard-settings-tab";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { PageHeader } from "@/components/layout/page-header";
 
-type SettingsTab = "email" | "appearance" | "pipeline" | "data" | "security" | "about";
+type SettingsTab = "email" | "appearance" | "pipeline" | "data" | "security" | "keyboard" | "about";
 
 const tabTitles: Record<SettingsTab, string> = {
     email: "Email Integration",
@@ -28,6 +29,7 @@ const tabTitles: Record<SettingsTab, string> = {
     pipeline: "Pipeline",
     data: "Data",
     security: "Security",
+    keyboard: "Keyboard Shortcuts",
     about: "About",
 };
 
@@ -188,6 +190,7 @@ export function SettingsPage() {
             case "pipeline": return <PipelineSettingsTab />;
             case "data": return renderDataContent();
             case "security": return <SecuritySettingsTab />;
+            case "keyboard": return <KeyboardSettingsTab />;
             case "about": return <AboutTab />;
             default: return renderAppearanceContent();
         }

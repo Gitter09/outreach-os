@@ -1,12 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./app-sidebar";
 import { CommandPalette } from "./command-palette";
+import { ShortcutHelpDialog } from "./shortcut-help-dialog";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
 import { ImportDialog } from "@/components/import/import-dialog";
+import { ComposeEmailDialog } from "@/components/email/compose-email-dialog";
 import { WhatsNewModal } from "@/components/whats-new-modal";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
+import { useKeyboardShortcuts, ShortcutActionMap } from "@/hooks/use-keyboard-shortcuts";
+import type { Contact } from "@/types/crm";
 
 function isNewerVersion(remote: string, current: string): boolean {
     const parse = (v: string) => v.split(".").map(Number);
@@ -21,6 +25,9 @@ export function AppLayout() {
     const [commandOpen, setCommandOpen] = useState(false);
     const [addContactOpen, setAddContactOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
+    const [composeEmailOpen, setComposeEmailOpen] = useState(false);
+    const [composeContact, setComposeContact] = useState<Contact | null>(null);
+    const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [newContactStatusId, setNewContactStatusId] = useState<string | undefined>(undefined);
     const [whatsNewOpen, setWhatsNewOpen] = useState(false);
@@ -29,19 +36,30 @@ export function AppLayout() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const isSettings = location.pathname.startsWith("/settings");
-
-    useEffect(() => {
-        const down = (e: KeyboardEvent) => {
-            if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-                if (isSettings) return;
-                e.preventDefault();
-                setCommandOpen((open) => !open);
+    const shortcutActions = useMemo<ShortcutActionMap>(() => ({
+        command_palette: () => setCommandOpen((o) => !o),
+        new_contact: () => setAddContactOpen(true),
+        compose_email: async () => {
+            const id = location.pathname.split("/")[2];
+            try {
+                const c = await invoke<Contact>("get_contact_by_id", { id });
+                setComposeContact(c);
+            } catch {
+                setComposeContact(null);
             }
-        };
-        document.addEventListener("keydown", down);
-        return () => document.removeEventListener("keydown", down);
-    }, [isSettings]);
+            setComposeEmailOpen(true);
+        },
+        open_settings: () => navigate("/settings"),
+        import_contacts: () => setImportOpen(true),
+        shortcut_help: () => setShortcutHelpOpen((o) => !o),
+        nav_dashboard: () => navigate("/"),
+        nav_people: () => navigate("/people"),
+        nav_emails: () => navigate("/emails"),
+        nav_tasks: () => navigate("/tasks"),
+        nav_templates: () => navigate("/templates"),
+    }), [navigate, location.pathname]);
+
+    useKeyboardShortcuts(shortcutActions);
 
     useEffect(() => {
         async function checkVersions() {
@@ -144,6 +162,15 @@ export function AppLayout() {
                 onImportComplete={handleRefresh}
             />
             <WhatsNewModal open={whatsNewOpen} onOpenChange={handleWhatsNewClose} />
+            <ComposeEmailDialog
+                contact={composeContact}
+                open={composeEmailOpen}
+                onOpenChange={(open) => {
+                    setComposeEmailOpen(open);
+                    if (!open) setComposeContact(null);
+                }}
+            />
+            <ShortcutHelpDialog open={shortcutHelpOpen} onOpenChange={setShortcutHelpOpen} />
         </div>
     );
 }
