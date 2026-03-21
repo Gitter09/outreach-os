@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { RotateCcw, MapPin } from "lucide-react";
+import { RotateCcw, MapPin, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +22,23 @@ import {
 
 const CATEGORIES: ShortcutCategory[] = ["Actions", "Navigation", "System"];
 
+/**
+ * Build a display combo from a KeyboardEvent, including modifier-only presses.
+ * Used for live preview during capture — unlike eventToCombo, this does NOT
+ * skip modifier-only keypresses so users see [⌘] [⇧] as they hold modifiers.
+ */
+function eventToLiveCombo(e: KeyboardEvent): string {
+    const parts: string[] = [];
+    if (e.metaKey || e.ctrlKey) parts.push("Meta");
+    if (e.altKey) parts.push("Alt");
+    if (e.shiftKey) parts.push("Shift");
+    const key = e.key;
+    if (!["Meta", "Control", "Alt", "Shift"].includes(key)) {
+        parts.push(key.toLowerCase());
+    }
+    return parts.join("+");
+}
+
 // ─── ShortcutRow ─────────────────────────────────────────────────────────────
 
 interface ShortcutRowProps {
@@ -31,6 +48,7 @@ interface ShortcutRowProps {
 function ShortcutRow({ def }: ShortcutRowProps) {
     const { settings, updateSetting } = useSettings();
     const [capturing, setCapturing] = useState(false);
+    const [liveCombo, setLiveCombo] = useState("");
     const [conflict, setConflict] = useState<string | null>(null);
     const captureRef = useRef<HTMLDivElement>(null);
 
@@ -41,13 +59,14 @@ function ShortcutRow({ def }: ShortcutRowProps) {
 
     function startCapture() {
         setCapturing(true);
+        setLiveCombo("");
         setConflict(null);
-        // Focus the capture div so keydown fires on it
         setTimeout(() => captureRef.current?.focus(), 0);
     }
 
     function cancelCapture() {
         setCapturing(false);
+        setLiveCombo("");
         setConflict(null);
     }
 
@@ -67,10 +86,13 @@ function ShortcutRow({ def }: ShortcutRowProps) {
                 return;
             }
 
-            const combo = eventToCombo(e);
-            if (!combo) return; // modifier-only keypress
+            // Update live display on every keydown (including modifier-only)
+            setLiveCombo(eventToLiveCombo(e));
 
-            // Conflict check — compare against all other actions' effective bindings
+            const combo = eventToCombo(e);
+            if (!combo) return; // modifier-only — keep showing partial combo, wait for key
+
+            // Conflict check
             const conflictDef = SHORTCUT_REGISTRY.find(
                 (other) =>
                     other.id !== def.id &&
@@ -84,10 +106,10 @@ function ShortcutRow({ def }: ShortcutRowProps) {
 
             setConflict(null);
             setCapturing(false);
+            setLiveCombo("");
             updateSetting(def.settingsKey, combo);
         };
 
-        // Use capture phase so stopPropagation prevents the global shortcut hook from also firing
         document.addEventListener("keydown", handler, true);
         return () => document.removeEventListener("keydown", handler, true);
     }, [capturing, def, settings, updateSetting]);
@@ -117,22 +139,37 @@ function ShortcutRow({ def }: ShortcutRowProps) {
                     )}
 
                     {capturing ? (
+                        /* Capture box: shows live keys as they're pressed */
                         <div
                             ref={captureRef}
                             tabIndex={0}
                             onBlur={cancelCapture}
-                            className="inline-flex items-center h-6 px-2 text-xs text-muted-foreground border border-dashed border-primary/60 rounded bg-primary/5 outline-none cursor-text min-w-[80px] justify-center"
+                            className="inline-flex items-center justify-center h-7 min-w-[90px] px-2 border border-dashed border-primary/60 rounded bg-primary/5 outline-none"
                         >
-                            Press keys…
+                            {liveCombo ? (
+                                <KeyCombo combo={liveCombo} />
+                            ) : (
+                                <span className="text-[11px] text-muted-foreground italic">
+                                    Press keys…
+                                </span>
+                            )}
                         </div>
                     ) : (
-                        <button
-                            onClick={startCapture}
-                            title="Click to reassign"
-                            className="focus:outline-none"
-                        >
-                            <KeyCombo combo={effectiveBinding} />
-                        </button>
+                        /* Badge: click to enter capture mode */
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={startCapture}
+                                    className="group/badge relative inline-flex items-center gap-1.5 rounded px-1 py-0.5 hover:bg-muted transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                >
+                                    <KeyCombo combo={effectiveBinding} />
+                                    <Pencil className="h-2.5 w-2.5 text-muted-foreground/40 opacity-0 group-hover/badge:opacity-100 transition-opacity" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="text-xs">
+                                Click to reassign
+                            </TooltipContent>
+                        </Tooltip>
                     )}
 
                     {isCustomized && !capturing && (
@@ -173,9 +210,9 @@ export function KeyboardSettingsTab() {
         <div className="space-y-8">
             <div className="flex items-start justify-between">
                 <div>
-                    <h3 className="text-lg font-medium">Keyboard Shortcuts</h3>
+                    <h3 className="text-lg font-medium">Shortcuts</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Click any shortcut badge to reassign it. Press Esc to cancel.
+                        Click any shortcut to reassign it. Press Esc to cancel.
                     </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleResetAll}>

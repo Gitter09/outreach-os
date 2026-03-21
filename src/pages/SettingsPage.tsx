@@ -29,7 +29,7 @@ const tabTitles: Record<SettingsTab, string> = {
     pipeline: "Pipeline",
     data: "Data",
     security: "Security",
-    keyboard: "Keyboard Shortcuts",
+    keyboard: "Shortcuts",
     about: "About",
 };
 
