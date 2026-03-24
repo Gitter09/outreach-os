@@ -27,7 +27,7 @@ function EmailMessageItem({ email, contact }: { email: EmailMessage, contact: Co
                     <h4 className="text-sm font-semibold">{email.subject || "(No Subject)"}</h4>
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center">
                         <Calendar className="h-3 w-3 mr-1" />
-                        {email.sent_at ? format(new Date(email.sent_at), "MMM d, yyyy") : "(Unknown Date)"}
+                        {email.sent_at ? format(new Date(email.sent_at), "MMM d, yyyy, h:mm a") : "(Unknown Date)"}
                     </span>
                 </div>
                 <div className="flex justify-between items-center text-xs text-muted-foreground">

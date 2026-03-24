@@ -246,7 +246,7 @@ function InboxEmailRow({ email }: { email: EmailMessage }) {
                     <div className="flex items-baseline justify-between gap-2">
                         <span className="font-medium text-sm truncate">{email.subject || "(No Subject)"}</span>
                         <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
-                            {email.sent_at ? format(new Date(email.sent_at), "MMM d, yyyy") : ""}
+                            {email.sent_at ? format(new Date(email.sent_at), "MMM d, yyyy, h:mm a") : ""}
                         </span>
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">
