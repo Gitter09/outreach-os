@@ -72,7 +72,7 @@
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -81,7 +81,7 @@ body {
   font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 16px;
   line-height: 1.6;
-  overflow-x: hidden;
+  overflow-x: clip;
   cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIGZpbGw9Im5vbmUiPjxwYXRoIGQ9Ik0yMDEuMTYzIDEzMy41NEwyMDEuMTQ5IDEzMy41MjhMMjAxLjEzNCAxMzMuNTE1TDkxLjY4NTUgMzYuNDkzNUM4Ni41MTQ0IDMxLjc2NTkgODEuNDI2OSAyNy45NTQ5IDc2LjU0MjEgMjUuNTI1QzcxLjc2NzEgMjMuMTQ5NyA2Ni4wODYxIDIxLjU1NjkgNjAuNDEzMyAyMy4xMjEzQzU0LjMxMTggMjQuODAzOSA1MC40ODc1IDI5LjQ2NzQgNDguMzYzOSAzNC43NTkwQzQ2LjMxMjIgMzkuODcxNSA0NS40OTk5IDQ2LjI3ODcgNDUuNDk5OSA1My41MzgzTDQ1LjQ5OTkgMjAwLjQzMVYyMDAuNDkzTDQ1LjUwMDggMjAwLjU1NUM0NS42MjE4IDIwOC44NjIgNTAuNDI3OSAyMTcuODQzIDU1Ljk5NjMgMjIzLjg5NEM1OC44OTM0IDIyNy4wNDMgNjIuNTE2MyAyMjkuOTg2IDY2LjY3MDQgMjMxLjc0MkM3MC45MTcyIDIzMy41MzcgNzYuMjE3IDIzNC4yNTQgODEuNDY5MSAyMzEuODg0Qzg1Ljc1MzYgMjI5Ljk1MSA4OS42NzU0IDIyNi4wNTUgOTIuODU2NSAyMjIuNjUxQzk0LjY4NDEgMjIwLjY5NSA5Ni44MzM2IDIxOC4yNTIgOTkuMDM1NSAyMTUuNzQ5QzEwMC43MTAgMjEzLjg0NyAxMDIuNDE0IDIxMS45MTAgMTA0LjAzMCAyMTAuMTI2QzExMi4xODkgMjAxLjEyMiAxMjEuMzQ2IDE5Mi4yODYgMTMyLjE2MSAxODcuNDA3QzE0My4wMTMgMTgyLjUxMSAxNTUuODA5IDE4MS4zNzUgMTY3Ljk2MyAxODEuMTQ2QzE3MC45NTkgMTgxLjA4OSAxNzMuODUwIDE4MS4wODcgMTc2LjY1MCAxODEuMDg1SDE3Ni42NjNIMTc2LjY4NkMxNzkuNDQ3IDE4MS4wODMgMTgyLjE2NCAxODEuMDgxIDE4NC42NjIgMTgxLjAxOUMxODkuMjMxIDE4MC45MDYgMTk0LjY0MyAxODAuNjA5IDE5OC43NzcgMTc4Ljg4MEMyMDguNzExIDE3NC43MjMgMjEwLjk3MiAxNjMuODM4IDIxMC43NTMgMTU2LjQ0NUMyMTAuNTIxIDE0OC41OTYgMjA3LjU3MCAxMzkuMjcyIDIwMS4xNjMgMTMzLjU0WiIgZmlsbD0iIzExMTExMSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjE3Ii8+PC9zdmc+') 0 0, auto;
 }
 
@@ -571,7 +571,7 @@ h2 {
 
 .hero-scroll {
   position: absolute;
-  bottom: 32px;
+  bottom: 64px;
   left: 50%;
   transform: translateX(-50%);
   color: var(--text-3);
@@ -636,9 +636,9 @@ h2 {
 
 .hero-why {
   width: 100%;
-  border-top: 1px solid var(--section-line);
-  padding-top: 28px;
-  padding-bottom: 60px;
+  background: var(--bg-void);
+  padding-top: 80px;
+  padding-bottom: 80px;
 }
 
 .why-inner {
@@ -717,14 +717,27 @@ h2 {
 
 #features {
   background: var(--bg-deep);
-  border-top: 1px solid var(--section-line);
-  padding: 110px 0 0;
+  padding: 60px 0 0;
   position: relative;
   z-index: 2;
 }
 
+.feat-intro-section {
+  background: var(--bg-deep);
+  width: 100%;
+  height: calc(100vh + 800px);
+}
+
+.engine-sticky {
+  position: sticky;
+  top: 15vh;
+  height: 70vh;
+  display: flex;
+  align-items: center;
+}
+
 .feat-hero-intro {
-  margin: 0 auto 96px auto;
+  margin: 0 auto;
   max-width: 1100px;
   text-align: left;
 }
@@ -743,6 +756,16 @@ h2 {
 
 .feat-hero-intro .hl-grey {
   color: var(--text-3);
+}
+
+.engine-word {
+  color: var(--text-3);
+  transition: color 0.15s ease;
+  display: inline;
+}
+
+.engine-word.is-lit {
+  color: var(--text);
 }
 
 /* ── Linear Features Layout Redesign ── */
@@ -1632,8 +1655,12 @@ footer {
     gap: 16px !important;
   }
 
+  .feat-intro-section {
+    height: calc(100vh + 500px);
+  }
+
   .feat-hero-intro {
-    margin-bottom: 64px;
+    margin-bottom: 0;
   }
   .feat-hero-intro h2 {
     font-size: clamp(28px, 6vw, 36px);
@@ -1723,7 +1750,7 @@ footer {
   }
 
   .feat-hero-intro {
-    margin-bottom: 48px;
+    margin-bottom: 0;
   }
 
   .hero-why {
@@ -1770,6 +1797,11 @@ footer {
   .clip-reveal-outer.clip-pending {
     clip-path: none !important;
     transition: none !important;
+  }
+
+  .engine-word {
+    transition: none !important;
+    color: var(--text) !important;
   }
 }
 

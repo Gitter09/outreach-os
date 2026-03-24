@@ -74,6 +74,57 @@
   revealEls.forEach(el => observer.observe(el));
 
 
+  /* ── ENGINE BODY TEXT: WORD-BY-WORD SCROLL REVEAL ── */
+  (function () {
+    const engineSection = document.getElementById('engine');
+    const engineBody = document.getElementById('engine-body');
+    if (!engineSection || !engineBody) return;
+
+    // Split text into word spans
+    var rawText = engineBody.textContent.replace(/\s+/g, ' ').trim();
+    var words = rawText.split(' ');
+    engineBody.textContent = '';
+
+    var wordEls = [];
+    words.forEach(function (word, i) {
+      var span = document.createElement('span');
+      span.className = 'engine-word';
+      span.textContent = word;
+      engineBody.appendChild(span);
+      wordEls.push(span);
+      if (i < words.length - 1) {
+        engineBody.appendChild(document.createTextNode(' '));
+      }
+    });
+
+    var totalWords = wordEls.length;
+
+    function updateEngineText() {
+      var rect = engineSection.getBoundingClientRect();
+      var scrollable = engineSection.offsetHeight - window.innerHeight;
+      if (scrollable <= 0) return;
+      var scrolled = -rect.top;
+      var progress = Math.max(0, Math.min(1, scrolled / scrollable));
+      var litCount = Math.round(progress * totalWords);
+
+      for (var i = 0; i < totalWords; i++) {
+        if (i < litCount) {
+          if (!wordEls[i].classList.contains('is-lit')) {
+            wordEls[i].classList.add('is-lit');
+          }
+        } else {
+          if (wordEls[i].classList.contains('is-lit')) {
+            wordEls[i].classList.remove('is-lit');
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', updateEngineText, { passive: true });
+    updateEngineText();
+  })();
+
+
   /* ── CLIP-PATH HEADLINE REVEALS ── */
   (function () {
     const HEADLINE_SELECTORS = [
