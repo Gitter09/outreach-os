@@ -92,7 +92,6 @@ a {
 }
 
 button {
-  cursor: pointer;
   border: none;
   background: none;
   font-family: inherit;
@@ -285,7 +284,6 @@ h2 {
   height: 18px;
   background: none;
   border: none;
-  cursor: pointer;
   padding: 0;
   z-index: 600;
 }

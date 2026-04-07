@@ -256,15 +256,46 @@ impl GmailClient {
         to: &str,
         subject: &str,
         body: &str,
+        attachments: &[crate::email_service::OutgoingAttachment],
     ) -> Result<String> {
-        // Build RFC 2822 email
-        let email = format!(
-            "To: {}\r\nSubject: {}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{}",
-            to, subject, body
-        );
+        // Build RFC 2822 message — HTML if no attachments, multipart/mixed otherwise
+        let raw_message = if attachments.is_empty() {
+            format!(
+                "MIME-Version: 1.0\r\nTo: {}\r\nSubject: {}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{}",
+                to, subject, body
+            )
+        } else {
+            let boundary = "==_JobDex_Boundary_==";
+            let mut msg = format!(
+                "MIME-Version: 1.0\r\nTo: {to}\r\nSubject: {subject}\r\nContent-Type: multipart/mixed; boundary=\"{boundary}\"\r\n\r\n"
+            );
+            // HTML part
+            msg.push_str(&format!(
+                "--{boundary}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{body}\r\n"
+            ));
+            // Attachment parts
+            for att in attachments {
+                let file_bytes = tokio::fs::read(&att.path).await?;
+                let b64 = BASE64_STANDARD.encode(&file_bytes);
+                // RFC 2045 §6.8: wrap at 76 chars
+                let chunked = b64
+                    .as_bytes()
+                    .chunks(76)
+                    .map(|c| std::str::from_utf8(c).unwrap())
+                    .collect::<Vec<_>>()
+                    .join("\r\n");
+                msg.push_str(&format!(
+                    "--{boundary}\r\nContent-Type: {mime}; name=\"{name}\"\r\nContent-Disposition: attachment; filename=\"{name}\"\r\nContent-Transfer-Encoding: base64\r\n\r\n{chunked}\r\n",
+                    mime = att.mime_type,
+                    name = att.filename,
+                ));
+            }
+            msg.push_str(&format!("--{boundary}--\r\n"));
+            msg
+        };
 
-        // Base64 URL-safe encode
-        let encoded = BASE64_URL_SAFE_NO_PAD.encode(email.as_bytes());
+        // Outer encoding is URL-safe no-pad (Gmail API requirement)
+        let encoded = BASE64_URL_SAFE_NO_PAD.encode(raw_message.as_bytes());
 
         let request_body = serde_json::json!({
             "raw": encoded

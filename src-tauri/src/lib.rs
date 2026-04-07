@@ -219,9 +219,6 @@ async fn update_status(
 #[tauri::command]
 async fn delete_status(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
     let pool = db.pool();
-    // fallback contacts to default? or set null?
-    // SQLite FK might restrict. For now, let's just delete and let contacts contain orphaned status_id (bad practice) or set null.
-    // Better: set status_id to null for contacts using this status.
     let mut tx = pool.begin().await?;
 
     sqlx::query("UPDATE contacts SET status_id = NULL WHERE status_id = ?")
@@ -300,9 +297,8 @@ async fn add_contact(db: tauri::State<'_, Db>, args: AddContactArgs) -> Result<S
             None => return Err(format!("Status '{}' does not exist.", sid).into()),
         }
     } else {
-        // Fallback: query the DB for is_default = 1, or just the first status
         let default_status: Option<(String, String)> = sqlx::query_as(
-            "SELECT id, label FROM statuses ORDER BY is_default DESC, position ASC LIMIT 1",
+            "SELECT id, label FROM statuses ORDER BY position ASC LIMIT 1",
         )
         .fetch_optional(pool)
         .await
@@ -592,6 +588,8 @@ pub fn run() {
             get_settings,
             save_setting,
             export_all_data,
+            export_all_data_to_path,
+            import_all_data,
             clear_all_data,
             import_contacts,
             analyze_import,
@@ -639,6 +637,8 @@ pub fn run() {
                 if !tray::should_exit() {
                     api.prevent_close();
                     let _ = window.hide();
+                } else {
+                    scheduler::stop_email_scheduler();
                 }
             }
         })
@@ -692,7 +692,7 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, AppErro
 
     // Determine the fallback status (default or first by position)
     let fallback: Option<String> = sqlx::query_scalar(
-        "SELECT id FROM statuses ORDER BY is_default DESC, position ASC LIMIT 1",
+        "SELECT id FROM statuses ORDER BY position ASC LIMIT 1",
     )
     .fetch_optional(pool)
     .await
@@ -731,10 +731,34 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, AppErro
 #[tauri::command]
 async fn delete_contact(db: tauri::State<'_, Db>, id: String) -> Result<(), AppError> {
     let pool = db.pool();
+    let mut tx = pool.begin().await?;
+
+    sqlx::query("DELETE FROM contact_events WHERE contact_id = ?")
+        .bind(&id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("DELETE FROM contact_tags WHERE contact_id = ?")
+        .bind(&id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("DELETE FROM contact_files WHERE contact_id = ?")
+        .bind(&id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("DELETE FROM scheduled_emails WHERE contact_id = ?")
+        .bind(&id)
+        .execute(&mut *tx)
+        .await?;
+
     sqlx::query("DELETE FROM contacts WHERE id = ?")
         .bind(&id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
+
+    tx.commit().await?;
     Ok(())
 }
 
@@ -869,10 +893,11 @@ async fn email_send(
     to: String,
     subject: String,
     body: String,
+    attachment_paths: Vec<String>,
 ) -> Result<String, AppError> {
     let service = jobdex_core::EmailService::new(db.inner().clone());
     let result = service
-        .send_email(&account_id, &to, &subject, &body)
+        .send_email(&account_id, &to, &subject, &body, attachment_paths)
         .await
         .map_err(|e| AppError::from(e.to_string()))?;
 
@@ -904,10 +929,11 @@ async fn email_schedule(
     subject: String,
     body: String,
     scheduled_at: i64,
+    attachment_paths: Vec<String>,
 ) -> Result<String, AppError> {
     let service = jobdex_core::EmailService::new(db.inner().clone());
     let result = service
-        .schedule_email(&account_id, &contact_id, &subject, &body, scheduled_at)
+        .schedule_email(&account_id, &contact_id, &subject, &body, scheduled_at, attachment_paths)
         .await
         .map_err(|e| AppError::from(e.to_string()))?;
 
@@ -1103,6 +1129,7 @@ struct ScheduledEmailRow {
     status: String,
     error_message: Option<String>,
     created_at: chrono::DateTime<chrono::Utc>,
+    attachment_paths: String,
 }
 
 #[tauri::command]
@@ -1117,7 +1144,8 @@ async fn get_scheduled_emails(
                     COALESCE(c.first_name, '') AS contact_first_name,
                     COALESCE(c.last_name, '') AS contact_last_name,
                     se.account_id, se.subject, se.body, se.scheduled_at, se.status,
-                    se.error_message, se.created_at
+                    se.error_message, se.created_at,
+                    COALESCE(se.attachment_paths, '[]') AS attachment_paths
              FROM scheduled_emails se
              LEFT JOIN contacts c ON se.contact_id = c.id
              WHERE se.contact_id = ?
@@ -1132,7 +1160,8 @@ async fn get_scheduled_emails(
                     COALESCE(c.first_name, '') AS contact_first_name,
                     COALESCE(c.last_name, '') AS contact_last_name,
                     se.account_id, se.subject, se.body, se.scheduled_at, se.status,
-                    se.error_message, se.created_at
+                    se.error_message, se.created_at,
+                    COALESCE(se.attachment_paths, '[]') AS attachment_paths
              FROM scheduled_emails se
              LEFT JOIN contacts c ON se.contact_id = c.id
              ORDER BY se.scheduled_at ASC",
@@ -1336,7 +1365,17 @@ async fn export_all_data(db: tauri::State<'_, Db>) -> Result<String, AppError> {
     let pool = db.pool();
 
     let contacts = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(
-        "SELECT id, company_id, first_name, last_name, email, linkedin_url, title, company, location, company_website, status, status_id, status_label, status_color, intelligence_summary, last_interaction_at, last_contacted_date, next_contact_date, NULL as effective_next_date, NULL as next_contact_event, cadence_stage, created_at, updated_at FROM contacts"
+        r#"
+        SELECT
+            c.id, c.company_id, c.first_name, c.last_name, c.email, c.linkedin_url,
+            c.title, c.company, c.location, c.company_website, c.status, c.status_id,
+            s.label as status_label, s.color as status_color,
+            c.intelligence_summary, c.last_interaction_at, c.last_contacted_date,
+            c.next_contact_date, NULL as effective_next_date, c.next_contact_event,
+            c.cadence_stage, c.created_at, c.updated_at
+        FROM contacts c
+        LEFT JOIN statuses s ON c.status_id = s.id
+        "#
     )
     .fetch_all(pool)
     .await?;
@@ -1347,19 +1386,311 @@ async fn export_all_data(db: tauri::State<'_, Db>) -> Result<String, AppError> {
     .fetch_all(pool)
     .await?;
 
+    let tags = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Tag>(
+        "SELECT id, name, color, created_at FROM tags",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct ContactTagRow {
+        contact_id: String,
+        tag_id: String,
+    }
+    let contact_tags = sqlx::query_as::<sqlx::Sqlite, ContactTagRow>(
+        "SELECT contact_id, tag_id FROM contact_tags",
+    )
+    .fetch_all(pool)
+    .await?;
+
     let settings_map = jobdex_core::settings::SettingsManager::new(pool.clone())
         .get_all()
         .await?;
 
     let export = serde_json::json!({
-        "version": "1.0",
+        "version": "1.1",
         "exported_at": chrono::Utc::now().to_rfc3339(),
         "contacts": contacts,
         "statuses": statuses,
+        "tags": tags,
+        "contact_tags": contact_tags,
         "settings": settings_map
     });
 
     Ok(serde_json::to_string_pretty(&export)?)
+}
+
+#[tauri::command]
+async fn export_all_data_to_path(
+    file_path: String,
+    db: tauri::State<'_, Db>,
+) -> Result<(), AppError> {
+    if file_path.contains("..") {
+        return Err(AppError::Validation("Invalid file path".to_string()));
+    }
+    let json = export_all_data(db).await?;
+    std::fs::write(&file_path, json)?;
+    Ok(())
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportSummary {
+    contacts_added: i32,
+    contacts_updated: i32,
+    statuses_added: i32,
+    tags_added: i32,
+}
+
+#[tauri::command]
+async fn import_all_data(
+    file_path: String,
+    db: tauri::State<'_, Db>,
+) -> Result<ImportSummary, AppError> {
+    // Validate path — no traversal
+    if file_path.contains("..") {
+        return Err(AppError::Validation(
+            "Invalid file path: path traversal not allowed".into(),
+        ));
+    }
+
+    let raw = std::fs::read_to_string(&file_path)?;
+    let json: serde_json::Value = serde_json::from_str(&raw)?;
+
+    let version = json["version"].as_str().unwrap_or("");
+    if version != "1.0" && version != "1.1" {
+        return Err(AppError::Validation(format!(
+            "Unsupported backup version: \"{}\". Only versions 1.0 and 1.1 are supported.",
+            version
+        )));
+    }
+
+    let pool = db.pool();
+    let mut tx = pool.begin().await?;
+
+    let mut contacts_added: i32 = 0;
+    let mut contacts_updated: i32 = 0;
+    let mut statuses_added: i32 = 0;
+    let mut tags_added: i32 = 0;
+
+    // --- Statuses ---
+    if let Some(statuses) = json["statuses"].as_array() {
+        for s in statuses {
+            let id = s["id"].as_str().unwrap_or("").to_string();
+            let label = s["label"].as_str().unwrap_or("").to_string();
+            let color = s["color"].as_str().unwrap_or("#6B7280").to_string();
+            let position = s["position"].as_i64().unwrap_or(0) as i32;
+            let is_default = s["is_default"].as_bool().unwrap_or(false);
+
+            if id.is_empty() || label.is_empty() {
+                continue;
+            }
+
+            let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM statuses WHERE id = ?")
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await?;
+
+            if !exists {
+                sqlx::query(
+                    "INSERT INTO statuses (id, label, color, position, is_default) VALUES (?, ?, ?, ?, ?)",
+                )
+                .bind(&id)
+                .bind(&label)
+                .bind(&color)
+                .bind(position)
+                .bind(is_default)
+                .execute(&mut *tx)
+                .await?;
+                statuses_added += 1;
+            }
+        }
+    }
+
+    // --- Tags (v1.1 only) ---
+    if version == "1.1" {
+        if let Some(tags) = json["tags"].as_array() {
+            for t in tags {
+                let id = t["id"].as_str().unwrap_or("").to_string();
+                let name = t["name"].as_str().unwrap_or("").to_string();
+                let color = t["color"].as_str().unwrap_or("#6B7280").to_string();
+                let created_at = t["created_at"].as_str().unwrap_or("").to_string();
+
+                if id.is_empty() || name.is_empty() {
+                    continue;
+                }
+
+                let exists: bool =
+                    sqlx::query_scalar("SELECT COUNT(*) > 0 FROM tags WHERE id = ?")
+                        .bind(&id)
+                        .fetch_one(&mut *tx)
+                        .await?;
+
+                if !exists {
+                    sqlx::query(
+                        "INSERT INTO tags (id, name, color, created_at) VALUES (?, ?, ?, ?)",
+                    )
+                    .bind(&id)
+                    .bind(&name)
+                    .bind(&color)
+                    .bind(&created_at)
+                    .execute(&mut *tx)
+                    .await?;
+                    tags_added += 1;
+                }
+            }
+        }
+    }
+
+    // --- Contacts ---
+    if let Some(contacts) = json["contacts"].as_array() {
+        for c in contacts {
+            let id = c["id"].as_str().unwrap_or("").to_string();
+            let first_name = c["first_name"].as_str().unwrap_or("").to_string();
+            let last_name = c["last_name"].as_str().unwrap_or("").to_string();
+
+            if id.is_empty() || first_name.is_empty() {
+                continue;
+            }
+
+            let email = c["email"].as_str().map(|s| s.to_string());
+            let linkedin_url = c["linkedin_url"].as_str().map(|s| s.to_string());
+
+            // Match priority: email → linkedin_url → id
+            let existing_id: Option<String> = if let Some(ref em) = email {
+                sqlx::query_scalar("SELECT id FROM contacts WHERE email = ? LIMIT 1")
+                    .bind(em)
+                    .fetch_optional(&mut *tx)
+                    .await?
+            } else if let Some(ref li) = linkedin_url {
+                sqlx::query_scalar("SELECT id FROM contacts WHERE linkedin_url = ? LIMIT 1")
+                    .bind(li)
+                    .fetch_optional(&mut *tx)
+                    .await?
+            } else {
+                sqlx::query_scalar("SELECT id FROM contacts WHERE id = ? LIMIT 1")
+                    .bind(&id)
+                    .fetch_optional(&mut *tx)
+                    .await?
+            };
+
+            if existing_id.is_some() {
+                // UPDATE only null/missing fields
+                sqlx::query(
+                    "UPDATE contacts SET
+                        first_name = COALESCE(NULLIF(first_name, ''), ?),
+                        last_name = COALESCE(NULLIF(last_name, ''), ?),
+                        title = COALESCE(title, ?),
+                        company = COALESCE(company, ?),
+                        location = COALESCE(location, ?),
+                        email = COALESCE(email, ?),
+                        linkedin_url = COALESCE(linkedin_url, ?),
+                        company_website = COALESCE(company_website, ?),
+                        status_id = COALESCE(status_id, ?),
+                        intelligence_summary = COALESCE(intelligence_summary, ?),
+                        last_contacted_date = COALESCE(last_contacted_date, ?),
+                        next_contact_date = COALESCE(next_contact_date, ?)
+                    WHERE id = ?",
+                )
+                .bind(&first_name)
+                .bind(&last_name)
+                .bind(c["title"].as_str())
+                .bind(c["company"].as_str())
+                .bind(c["location"].as_str())
+                .bind(c["email"].as_str())
+                .bind(c["linkedin_url"].as_str())
+                .bind(c["company_website"].as_str())
+                .bind(c["status_id"].as_str())
+                .bind(c["intelligence_summary"].as_str().or(c["summary"].as_str()))
+                .bind(c["last_contacted_date"].as_str())
+                .bind(c["next_contact_date"].as_str())
+                .bind(existing_id.as_deref().unwrap_or(&id))
+                .execute(&mut *tx)
+                .await?;
+                contacts_updated += 1;
+            } else {
+                // INSERT new contact preserving id
+                let created_at = c["created_at"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string();
+                let updated_at = c["updated_at"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string();
+
+                sqlx::query(
+                    "INSERT INTO contacts (
+                        id, first_name, last_name, title, company, location,
+                        email, linkedin_url, company_website, status_id,
+                        intelligence_summary, last_contacted_date, next_contact_date,
+                        cadence_stage, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                )
+                .bind(&id)
+                .bind(&first_name)
+                .bind(&last_name)
+                .bind(c["title"].as_str())
+                .bind(c["company"].as_str())
+                .bind(c["location"].as_str())
+                .bind(c["email"].as_str())
+                .bind(c["linkedin_url"].as_str())
+                .bind(c["company_website"].as_str())
+                .bind(c["status_id"].as_str())
+                .bind(c["intelligence_summary"].as_str().or(c["summary"].as_str()))
+                .bind(c["last_contacted_date"].as_str())
+                .bind(c["next_contact_date"].as_str())
+                .bind(c["cadence_stage"].as_i64().map(|n| n as i32))
+                .bind(if created_at.is_empty() { chrono::Utc::now().to_rfc3339() } else { created_at })
+                .bind(if updated_at.is_empty() { chrono::Utc::now().to_rfc3339() } else { updated_at })
+                .execute(&mut *tx)
+                .await?;
+                contacts_added += 1;
+            }
+        }
+    }
+
+    // --- Contact-tag assignments (v1.1 only) ---
+    if version == "1.1" {
+        if let Some(ct_rows) = json["contact_tags"].as_array() {
+            for row in ct_rows {
+                let contact_id = row["contact_id"].as_str().unwrap_or("").to_string();
+                let tag_id = row["tag_id"].as_str().unwrap_or("").to_string();
+                if contact_id.is_empty() || tag_id.is_empty() {
+                    continue;
+                }
+                sqlx::query(
+                    "INSERT OR IGNORE INTO contact_tags (contact_id, tag_id) VALUES (?, ?)",
+                )
+                .bind(&contact_id)
+                .bind(&tag_id)
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+    }
+
+    // --- Settings ---
+    if let Some(settings) = json["settings"].as_object() {
+        for (key, value) in settings {
+            if let Some(v) = value.as_str() {
+                sqlx::query("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+                    .bind(key)
+                    .bind(v)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
+    }
+
+    tx.commit().await?;
+
+    Ok(ImportSummary {
+        contacts_added,
+        contacts_updated,
+        statuses_added,
+        tags_added,
+    })
 }
 
 #[tauri::command]
@@ -1489,13 +1820,22 @@ async fn analyze_import(
     })
 }
 
+#[derive(serde::Serialize)]
+struct ImportResult {
+    imported: usize,
+    skipped: usize,
+    merged: usize,
+    failed: usize,
+    errors: Vec<String>,
+}
+
 #[tauri::command]
 async fn import_contacts(
     db: tauri::State<'_, Db>,
     file_path: String,
     mapping: jobdex_core::import::ColumnMapping,
     mode: String, // "skip", "merge", "none"
-) -> Result<usize, AppError> {
+) -> Result<ImportResult, AppError> {
     let contacts = jobdex_core::import::parse_file_with_mapping(&file_path, &mapping)?;
 
     let pool = db.pool();
@@ -1512,7 +1852,11 @@ async fn import_contacts(
         vec![]
     };
 
-    let mut count = 0;
+    let mut imported = 0;
+    let mut skipped = 0;
+    let mut merged = 0;
+    let mut failed = 0;
+    let mut errors: Vec<String> = Vec::new();
 
     for contact in contacts {
         let mut duplicate_id: Option<String> = None;
@@ -1558,23 +1902,15 @@ async fn import_contacts(
         if let Some(id) = duplicate_id {
             if mode == "merge" {
                 // Merge Logic: Update fields only if they are missing in DB
-                // This is a comprehensive update query using COALESCE logic
-                // Since SQLite doesn't support complex updates easily in one go without loading,
-                // and we already loaded basic info, doing a specific update is safer.
-                // However, for simplicity and performance, we can just execute an update blindly for fields that are provided.
-                // A better approach for "Update" is usually "Overwrite" or "Fill Missing". The user asked for "Update".
-                // We'll implementing "Fill Missing" as it's safer.
-
-                // We need to know which fields are currently NULL in DB to fill them.
-                // The `existing` vec only has a few fields. Let's run a smart update.
-
-                let _ = sqlx::query(
+                let result = sqlx::query(
                     r#"
-                    UPDATE contacts SET 
+                    UPDATE contacts SET
                         email = COALESCE(email, NULLIF(?, '')),
                         linkedin_url = COALESCE(linkedin_url, NULLIF(?, '')),
                         company = COALESCE(company, NULLIF(?, '')),
-                        title = COALESCE(title, NULLIF(?, ''))
+                        title = COALESCE(title, NULLIF(?, '')),
+                        location = COALESCE(location, NULLIF(?, '')),
+                        company_website = COALESCE(company_website, NULLIF(?, ''))
                     WHERE id = ?
                     "#,
                 )
@@ -1582,19 +1918,38 @@ async fn import_contacts(
                 .bind(&contact.linkedin_url)
                 .bind(&contact.company)
                 .bind(&contact.title)
+                .bind(&contact.location)
+                .bind(&contact.company_website)
                 .bind(&id)
                 .execute(pool)
                 .await;
 
-                // Count merge as "processed"
-                count += 1;
+                if result.is_ok() {
+                    merged += 1;
+                } else {
+                    failed += 1;
+                    errors.push(format!("Failed to merge contact: {} {}", contact.first_name, contact.last_name));
+                }
+            } else {
+                skipped += 1;
             }
-            // If mode == "skip", do nothing
         } else {
-            // Insert New
+            // Insert New - use position-based default status (top of the list)
             let id = uuid::Uuid::new_v4().to_string();
+            let default_status: Option<(String, String)> = sqlx::query_as(
+                "SELECT id, label FROM statuses ORDER BY position ASC LIMIT 1",
+            )
+            .fetch_optional(pool)
+            .await
+            .map_err(|e: sqlx::Error| e.to_string())?;
+
+            let (status_label, status_id) = match default_status {
+                Some((id, label)) => (label, id),
+                None => ("Imported".to_string(), String::new()),
+            };
+
             let result = sqlx::query(
-                "INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, company, title, status, status_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, company, title, location, company_website, status, status_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
                 .bind(&id)
                 .bind(&contact.first_name)
@@ -1603,18 +1958,23 @@ async fn import_contacts(
                 .bind(&contact.linkedin_url)
                 .bind(&contact.company)
                 .bind(&contact.title)
-                .bind("New")
-                .bind("stat-new")
+                .bind(&contact.location)
+                .bind(&contact.company_website)
+                .bind(&status_label)
+                .bind(&status_id)
                 .execute(pool)
                 .await;
 
             if result.is_ok() {
-                count += 1;
+                imported += 1;
+            } else {
+                failed += 1;
+                errors.push(format!("Failed to import contact: {} {}", contact.first_name, contact.last_name));
             }
         }
     }
 
-    Ok(count)
+    Ok(ImportResult { imported, skipped, merged, failed, errors })
 }
 
 #[tauri::command]
@@ -1646,13 +2006,18 @@ async fn update_contacts_status_bulk(
     let pool = db.pool();
     let mut tx = pool.begin().await?;
 
+    // Fetch the label for the given status_id to keep legacy 'status' column in sync
+    let status_label: Option<String> = sqlx::query_scalar("SELECT label FROM statuses WHERE id = ?")
+        .bind(&status_id)
+        .fetch_optional(&mut *tx)
+        .await?;
+
     let mut affected_count = 0;
-    // We can assume status_id is valid for now, or fetch label if we wanted to sync legacy column
-    // For now we just update status_id.
 
     for id in ids {
-        let result = sqlx::query("UPDATE contacts SET status_id = ? WHERE id = ?")
+        let result = sqlx::query("UPDATE contacts SET status_id = ?, status = COALESCE(?, status) WHERE id = ?")
             .bind(&status_id)
+            .bind(&status_label)
             .bind(id)
             .execute(&mut *tx)
             .await?;
@@ -1802,17 +2167,43 @@ async fn unassign_tag(
 
 // ===== Email Template Commands =====
 
+#[derive(serde::Serialize)]
+struct EmailTemplateResponse {
+    id: String,
+    name: String,
+    subject: Option<String>,
+    body: Option<String>,
+    attachment_paths: Vec<String>,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
 #[tauri::command]
 async fn get_email_templates(
     db: tauri::State<'_, Db>,
-) -> Result<Vec<jobdex_core::models::EmailTemplate>, AppError> {
+) -> Result<Vec<EmailTemplateResponse>, AppError> {
     let pool = db.pool();
     let templates = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::EmailTemplate>(
-        "SELECT id, name, subject, body, created_at, updated_at FROM email_templates ORDER BY name ASC",
+        "SELECT id, name, subject, body, attachment_paths, created_at, updated_at FROM email_templates ORDER BY name ASC",
     )
     .fetch_all(pool)
     .await?;
-    Ok(templates)
+    let response = templates
+        .into_iter()
+        .map(|t| {
+            let paths: Vec<String> = serde_json::from_str(&t.attachment_paths).unwrap_or_default();
+            EmailTemplateResponse {
+                id: t.id,
+                name: t.name,
+                subject: t.subject,
+                body: t.body,
+                attachment_paths: paths,
+                created_at: t.created_at,
+                updated_at: t.updated_at,
+            }
+        })
+        .collect();
+    Ok(response)
 }
 
 #[tauri::command]
@@ -1822,18 +2213,22 @@ async fn upsert_email_template(
     name: String,
     subject: Option<String>,
     body: Option<String>,
+    attachment_paths: Option<Vec<String>>,
 ) -> Result<String, AppError> {
     let pool = db.pool();
     let template_id = id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let paths_json = serde_json::to_string(&attachment_paths.unwrap_or_default())
+        .map_err(|e| AppError::Serialization(e))?;
 
     sqlx::query(
         r#"
-        INSERT INTO email_templates (id, name, subject, body, updated_at)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(id) DO UPDATE SET 
+        INSERT INTO email_templates (id, name, subject, body, attachment_paths, updated_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             subject = excluded.subject,
             body = excluded.body,
+            attachment_paths = excluded.attachment_paths,
             updated_at = CURRENT_TIMESTAMP
         "#,
     )
@@ -1841,6 +2236,7 @@ async fn upsert_email_template(
     .bind(name)
     .bind(subject)
     .bind(body)
+    .bind(paths_json)
     .execute(pool)
     .await?;
 
@@ -2050,8 +2446,25 @@ async fn delete_contact_event(db: tauri::State<'_, Db>, id: String) -> Result<()
 
 // ===== Update Check =====
 
+use std::sync::Mutex;
+
+static UPDATE_CACHE: Mutex<Option<(String, std::time::Instant)>> = Mutex::new(None);
+const UPDATE_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(3600); // 1 hour
+
 #[tauri::command]
 async fn check_for_update() -> Result<String, AppError> {
+    // Return cached result if still valid
+    {
+        let cache = UPDATE_CACHE.lock().map_err(|e| AppError::Internal(e.to_string()))?;
+        if let Some((cached_tag, timestamp)) = cache.as_ref() {
+            if timestamp.elapsed() < UPDATE_CACHE_TTL {
+                #[cfg(debug_assertions)]
+                println!("[update] returning cached result: {:?}", cached_tag);
+                return Ok(cached_tag.clone());
+            }
+        }
+    }
+
     #[cfg(debug_assertions)]
     println!("[update] checking GitHub for latest release...");
 
@@ -2093,6 +2506,12 @@ async fn check_for_update() -> Result<String, AppError> {
 
     #[cfg(debug_assertions)]
     println!("[update] latest tag: {:?}", tag);
+
+    // Cache the result
+    {
+        let mut cache = UPDATE_CACHE.lock().map_err(|e| AppError::Internal(e.to_string()))?;
+        *cache = Some((tag.clone(), std::time::Instant::now()));
+    }
 
     Ok(tag)
 }

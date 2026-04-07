@@ -13,12 +13,15 @@ Everything runs locally on your machine. No cloud. No telemetry. No vendor lock-
  
 ## What it does
  
-- **People & Pipeline** — A clean contact database with a drag-and-drop Kanban board. Track every relationship from first email to offer.
-- **Contact Intelligence** — A living profile for every contact. Write your own notes, track interaction history, see exactly where things stand before you hit send.
-- **Email Integration** — Connect Gmail or Outlook via OAuth and send directly from JobDex. Mail merge templates with variables. Schedule sends. Full email history per contact.
-- **Two-Step Import** — Drag in a LinkedIn CSV export and map columns in two clicks. Smart duplicate detection handles the rest.
-- **Templates** — Reusable email templates with merge variables (`{{firstName}}`, `{{company}}`, `{{role}}`). Write once, personalise at scale.
-- **Privacy by default** — SQLite database encrypted with SQLCipher AES-256. OAuth tokens encrypted with AES-256-GCM. Master key in your OS Keychain. Your data never leaves your machine.
+- **People & Pipeline** — A contact database with table and Kanban views. Custom stages, colours, drag-to-reorder. Track every relationship from first message to offer.
+- **Contact profiles** — A full profile for every contact: notes, attached files, upcoming events, activity timeline, email history. Everything in one place before you hit send.
+- **Email Integration** — Connect Gmail or Outlook via OAuth. Send directly from JobDex, schedule sends, and use merge variables (`{{first_name}}`, `{{company}}`). Full thread history per contact.
+- **Templates & Signatures** — Reusable email templates with merge variables. Manage signatures once in Settings, select them at compose time.
+- **Tags & Filtering** — Tag contacts however makes sense to you, then filter the People page by tag.
+- **Onboarding** — First-time users get a proper welcome and walkthrough instead of an empty screen.
+- **Keyboard shortcuts** — Cmd+N, Cmd+Shift+C, Cmd+1–5, Cmd+/, and more. Full list in-app via Cmd+/.
+- **Import / Export / Restore** — Import from LinkedIn CSV. Export all your data to JSON. Restore from a backup file.
+- **Privacy by default** — SQLite encrypted with SQLCipher AES-256. OAuth tokens encrypted with AES-256-GCM. Master key in your OS Keychain. Your data never leaves your machine.
  
 ---
  
@@ -56,6 +59,19 @@ Grab the latest build from [GitHub Releases](https://github.com/Gitter09/jobdex/
  
 ---
  
+## Email setup (Gmail / Outlook)
+
+JobDex connects to email via OAuth. To use email features locally:
+
+**Gmail:** Create an OAuth 2.0 credential in Google Cloud Console with the Gmail API enabled. Set the redirect URI to `http://localhost:52338/oauth/callback`. Save your client ID and secret to `~/.jobdex/credentials.json`:
+```json
+{ "client_id": "...", "client_secret": "..." }
+```
+
+**Outlook:** Create an app in Azure Entra with `Mail.ReadWrite`, `Mail.Send`, and `offline_access` scopes. Add `http://localhost:52338/oauth/callback` as a redirect URI. Save your client ID to Settings → Email → Outlook Client ID.
+
+---
+
 ## Running locally
  
 ```bash
@@ -73,22 +89,18 @@ bun run tauri build
  
 ## Roadmap
  
-These are the things I'm actively thinking about or working toward. No timelines — this is a passion project.
+No timelines — this is a passion project.
  
 **Coming next:**
 - Multi-step email campaigns — set up a sequence, JobDex handles the follow-ups
 - Email open & click tracking — know when someone actually read your message
-- Full pipeline configuration — custom stages, colors, ordering
-- Dashboard — a real one, with actual data
-- Keyboard shortcuts — the full set, not just ⌘K
-- Tag filtering on the People page
-- Onboarding flow — so new users aren't dropped into an empty app with no idea what to do
+- Tasks page — a job-search to-do list tied to contacts
+- Dashboard — real stats: emails sent, replies, pipeline movement
+- Automation rules — if a contact replies, move them forward automatically
  
 **On the horizon:**
-- Tasks — a job-search specific to-do list tied to contacts and companies
-- Emails page — a lightweight inbox so you don't have to context-switch to Gmail
-- Automation rules — if a contact replies, move them forward automatically
-- Company entity — group contacts by company, track applications per org
+- Full unified inbox
+- Company entity — group contacts by org, track applications per company
  
 ---
  

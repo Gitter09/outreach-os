@@ -17,10 +17,23 @@ import {
     Trash2,
     Database,
     Power,
+    Upload,
 } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
+import { open as openFileDialog, save as saveFileDialog } from "@tauri-apps/plugin-dialog";
+import type { ImportSummary } from "@/types/crm";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/layout/page-header";
 
 type SettingsTab = "email" | "appearance" | "pipeline" | "data" | "security" | "keyboard" | "about";
@@ -44,6 +57,8 @@ export function SettingsPage() {
     const { handleError } = useErrors();
 
     const [autostart, setAutostart] = useState(false);
+    const [pendingImportPath, setPendingImportPath] = useState<string | null>(null);
+    const [importLoading, setImportLoading] = useState(false);
 
     useEffect(() => {
         invoke<boolean>("is_background_service_enabled")
@@ -155,31 +170,58 @@ export function SettingsPage() {
 
     const handleExport = async () => {
         try {
-            const data = await invoke<string>("export_all_data");
-            const blob = new Blob([data], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `jobdex-export-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const filePath = await saveFileDialog({
+                defaultPath: `jobdex-export-${new Date().toISOString().split("T")[0]}.json`,
+                filters: [{ name: "JSON", extensions: ["json"] }],
+            });
+            if (!filePath) return;
+            await invoke("export_all_data_to_path", { filePath });
+            toast.success("Export saved.");
         } catch (error) {
             handleError(error, "Failed to export data");
         }
     };
 
+    const [clearDialogOpen, setClearDialogOpen] = useState(false);
+
     const handleClearDatabase = async () => {
-        if (!confirm("Are you sure? This will delete all contacts, statuses, and tags. This action cannot be undone.")) {
-            return;
-        }
+        setClearDialogOpen(false);
         try {
             await invoke("clear_all_data");
             toast.success("Database cleared. Reloading...");
             setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             handleError(error, "Failed to clear database");
+        }
+    };
+
+    const handleRestoreClick = async () => {
+        try {
+            const selected = await openFileDialog({
+                multiple: false,
+                filters: [{ name: "JobDex Backup", extensions: ["json"] }],
+            });
+            if (selected && typeof selected === "string") {
+                setPendingImportPath(selected);
+            }
+        } catch (error) {
+            handleError(error, "Failed to open file picker");
+        }
+    };
+
+    const handleRestoreConfirm = async () => {
+        if (!pendingImportPath) return;
+        setImportLoading(true);
+        try {
+            const result = await invoke<ImportSummary>("import_all_data", { filePath: pendingImportPath });
+            toast.success(
+                `Import complete — ${result.contactsAdded} contacts added, ${result.contactsUpdated} updated.`
+            );
+        } catch (error) {
+            handleError(error, "Import failed. The file may be invalid or corrupted.");
+        } finally {
+            setImportLoading(false);
+            setPendingImportPath(null);
         }
     };
 
@@ -208,6 +250,21 @@ export function SettingsPage() {
                     </Button>
                 </div>
 
+                <div className="border rounded-lg p-6 space-y-4 bg-muted/20">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-md">
+                            <Upload className="h-5 w-5 text-primary" />
+                        </div>
+                        <h4 className="font-semibold">Restore from Backup</h4>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                        Restore contacts, statuses, and tags from a previously exported backup file. Email templates and signatures are not included in backups.
+                    </p>
+                    <Button variant="outline" className="w-full" onClick={handleRestoreClick}>
+                        Choose backup file...
+                    </Button>
+                </div>
+
                 <div className="border rounded-lg p-6 space-y-4 bg-destructive/5 border-destructive/20">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-destructive/10 rounded-md">
@@ -218,11 +275,45 @@ export function SettingsPage() {
                     <p className="text-xs text-muted-foreground leading-relaxed">
                         Permanently delete all contacts, tags, and custom statuses. Your settings and API keys will remain untouched.
                     </p>
-                    <Button variant="destructive" className="w-full" onClick={handleClearDatabase}>
+                    <Button variant="destructive" className="w-full" onClick={() => setClearDialogOpen(true)}>
                         Clear All Data
                     </Button>
                 </div>
             </div>
+
+            <AlertDialog open={!!pendingImportPath} onOpenChange={(open) => { if (!open) setPendingImportPath(null); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Restore from backup?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will merge the backup into your existing data. Nothing will be deleted. Any new contacts, statuses, and tags in the file will be added.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={importLoading}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRestoreConfirm} disabled={importLoading}>
+                            {importLoading ? "Importing..." : "Restore"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Clear all data?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will delete all contacts, statuses, and tags. This action cannot be undone. Your settings and API keys will remain untouched.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearDatabase}>
+                            Clear All Data
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex gap-3">
                 <Database className="h-5 w-5 text-blue-500 shrink-0" />

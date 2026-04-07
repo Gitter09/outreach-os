@@ -1,4 +1,6 @@
 use anyhow::{anyhow, Result};
+use base64::prelude::BASE64_STANDARD;
+use base64::Engine;
 use oauth2::{
     basic::BasicClient, AuthUrl, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     PkceCodeVerifier, RedirectUrl, Scope, TokenUrl,
@@ -248,22 +250,41 @@ impl OutlookClient {
         to: &str,
         subject: &str,
         body: &str,
+        attachments: &[crate::email_service::OutgoingAttachment],
     ) -> Result<String> {
-        let request_body = serde_json::json!({
-            "message": {
-                "subject": subject,
-                "body": {
-                    "contentType": "HTML",
-                    "content": body
-                },
-                "toRecipients": [
-                    {
-                        "emailAddress": {
-                            "address": to
-                        }
-                    }
-                ]
+        // Build attachments array for Graph API
+        let mut att_json: Vec<serde_json::Value> = Vec::new();
+        for att in attachments {
+            let file_bytes = tokio::fs::read(&att.path).await?;
+            let b64 = BASE64_STANDARD.encode(&file_bytes);
+            att_json.push(serde_json::json!({
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                "name": att.filename,
+                "contentType": att.mime_type,
+                "contentBytes": b64,
+            }));
+        }
+
+        let mut message = serde_json::json!({
+            "subject": subject,
+            "body": {
+                "contentType": "HTML",
+                "content": body
             },
+            "toRecipients": [
+                {
+                    "emailAddress": {
+                        "address": to
+                    }
+                }
+            ]
+        });
+        if !att_json.is_empty() {
+            message["attachments"] = serde_json::Value::Array(att_json);
+        }
+
+        let request_body = serde_json::json!({
+            "message": message,
             "saveToSentItems": "true"
         });
 

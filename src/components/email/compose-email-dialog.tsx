@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { RichTextEditor, type Editor } from "@/components/email/rich-text-editor";
 import { invoke } from "@tauri-apps/api/core";
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import {
     Popover,
     PopoverContent,
@@ -28,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Send, Loader2, Calendar as CalendarIcon, FileText, Clock, Trash2, Pencil, X, Check } from "lucide-react";
+import { Mail, Send, Loader2, Calendar as CalendarIcon, FileText, Clock, Trash2, Pencil, X, Check, Paperclip } from "lucide-react";
 import { Contact, EmailTemplate, ScheduledEmail, EmailSignature } from "@/types/crm";
 import { format } from "date-fns";
 
@@ -73,7 +75,7 @@ export function ComposeEmailDialog({
     // Signatures
     const [signatures, setSignatures] = useState<EmailSignature[]>([]);
     const [selectedSignatureId, setSelectedSignatureId] = useState<string>("none");
-    const SIGNATURE_SEPARATOR = "\n\n--\n";
+    const SIGNATURE_SEPARATOR_HTML = '<hr class="signature-separator" />';
 
     // Scheduled emails viewer
     const [contactScheduled, setContactScheduled] = useState<ScheduledEmail[]>([]);
@@ -87,9 +89,12 @@ export function ComposeEmailDialog({
     const [editTime, setEditTime] = useState("");
     const [editSaving, setEditSaving] = useState(false);
 
+    // Attachments
+    const [attachments, setAttachments] = useState<string[]>([]);
+
     // Variable insertion — track which field is focused
     const subjectRef = useRef<HTMLInputElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const editorRef = useRef<Editor | null>(null);
     const [focusedField, setFocusedField] = useState<"subject" | "body">("body");
 
     const AVAILABLE_VARIABLES = ["first_name", "last_name", "company", "title", "location"];
@@ -151,17 +156,26 @@ export function ComposeEmailDialog({
                 input.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
             }, 0);
         } else {
-            const textarea = textareaRef.current;
-            if (!textarea) return;
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const newBody = body.substring(0, start) + textToInsert + body.substring(end);
-            setBody(newBody);
-            setTimeout(() => {
-                textarea.focus();
-                textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
-            }, 0);
+            editorRef.current?.chain().focus().insertContent(textToInsert).run();
         }
+    };
+
+    const handleAttachFiles = async () => {
+        try {
+            const selected = await openFileDialog({ multiple: true });
+            if (!selected) return;
+            const paths = Array.isArray(selected) ? selected : [selected];
+            setAttachments(prev => {
+                const existing = new Set(prev);
+                return [...prev, ...paths.filter(p => !existing.has(p))];
+            });
+        } catch (err) {
+            handleError(err, "Failed to open file picker");
+        }
+    };
+
+    const removeAttachment = (path: string) => {
+        setAttachments(prev => prev.filter(p => p !== path));
     };
 
     const getScheduledDateTime = (): Date | null => {
@@ -182,7 +196,8 @@ export function ComposeEmailDialog({
             handleError("Please connect an email account first in Settings.");
             return;
         }
-        if (!to || !subject || !body) {
+        const isBodyEmpty = !body || body === "<p></p>" || body.replace(/<[^>]*>/g, "").trim() === "";
+        if (!to || !subject || isBodyEmpty) {
             handleError("Please fill in all fields");
             return;
         }
@@ -202,7 +217,8 @@ export function ComposeEmailDialog({
                     contactId: contact.id,
                     subject,
                     body,
-                    scheduledAt: Math.floor(scheduleAt.getTime() / 1000)
+                    scheduledAt: Math.floor(scheduleAt.getTime() / 1000),
+                    attachmentPaths: attachments,
                 });
                 toast.success(`Email scheduled for ${format(scheduleAt, "PP p")}`);
             } else {
@@ -211,7 +227,8 @@ export function ComposeEmailDialog({
                     contactId: contact?.id ?? null,
                     to,
                     subject,
-                    body
+                    body,
+                    attachmentPaths: attachments,
                 });
                 toast.success("Email sent successfully!");
                 onEmailSent?.();
@@ -219,10 +236,12 @@ export function ComposeEmailDialog({
             onOpenChange(false);
             setSubject("");
             setBody("");
+            editorRef.current?.commands.setContent("");
             setScheduledDate(undefined);
             setScheduledTime("");
             setIsScheduling(false);
             setSelectedSignatureId("none");
+            setAttachments([]);
         } catch (err) {
             handleError(err, "Failed to send email");
         } finally {
@@ -252,24 +271,39 @@ export function ComposeEmailDialog({
 
         setSubject(newSubject);
         setBody(newBody);
+        editorRef.current?.commands.setContent(newBody);
+        if (template.attachment_paths?.length) {
+            setAttachments(prev => {
+                const existing = new Set(prev);
+                return [...prev, ...template.attachment_paths.filter(p => !existing.has(p))];
+            });
+        }
         toast.info(`Applied template: ${template.name}`);
     };
 
     const applySignature = (sigId: string) => {
         // Strip any previously applied signature first
-        const baseBody = selectedSignatureId !== "none"
-            ? body.split(SIGNATURE_SEPARATOR)[0]
-            : body;
+        const currentHtml = editorRef.current?.getHTML() ?? body;
+        const baseHtml = selectedSignatureId !== "none"
+            ? currentHtml.split(SIGNATURE_SEPARATOR_HTML)[0]
+            : currentHtml;
 
         if (sigId === "none") {
-            setBody(baseBody);
+            setBody(baseHtml);
+            editorRef.current?.commands.setContent(baseHtml);
             setSelectedSignatureId("none");
             return;
         }
 
         const sig = signatures.find((s) => s.id === sigId);
         if (sig) {
-            setBody(baseBody + SIGNATURE_SEPARATOR + sig.content);
+            // Support both plain-text and HTML signature content
+            const sigHtml = sig.content.includes("<")
+                ? sig.content
+                : `<p>${sig.content.replace(/\n/g, "<br />")}</p>`;
+            const newHtml = baseHtml + SIGNATURE_SEPARATOR_HTML + sigHtml;
+            setBody(newHtml);
+            editorRef.current?.commands.setContent(newHtml);
             setSelectedSignatureId(sigId);
         }
     };
@@ -432,16 +466,14 @@ export function ComposeEmailDialog({
 
                         <div className="space-y-2">
                             <Label>Message Body</Label>
-                            <Textarea
-                                ref={textareaRef}
+                            <RichTextEditor
                                 value={body}
-                                onChange={(e) => setBody(e.target.value)}
+                                onChange={setBody}
+                                placeholder="Write your message..."
+                                minHeight={280}
+                                disabled={sending}
+                                editorRef={editorRef}
                                 onFocus={() => setFocusedField("body")}
-                                rows={12}
-                                className="font-sans"
-                                autoCorrect="off"
-                                autoCapitalize="off"
-                                spellCheck={false}
                             />
                             <div className="flex flex-wrap gap-2 mt-1 items-center">
                                 <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mr-1">Insert Variable:</span>
@@ -456,6 +488,45 @@ export function ComposeEmailDialog({
                                     </Badge>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Attachments */}
+                        <div className="space-y-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleAttachFiles}
+                                className="h-7 px-2 text-xs gap-1.5 text-muted-foreground"
+                            >
+                                <Paperclip className="h-3.5 w-3.5" />
+                                Attach files
+                            </Button>
+                            {attachments.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {attachments.map((path) => {
+                                        const name = path.split("/").pop() ?? path;
+                                        return (
+                                            <Badge
+                                                key={path}
+                                                variant="secondary"
+                                                className="flex items-center gap-1 text-xs font-normal max-w-[220px]"
+                                            >
+                                                <Paperclip className="h-3 w-3 shrink-0" />
+                                                <span className="truncate">{name}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeAttachment(path)}
+                                                    className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5 shrink-0"
+                                                    aria-label={`Remove ${name}`}
+                                                >
+                                                    <X className="h-2.5 w-2.5" />
+                                                </button>
+                                            </Badge>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                     </div>

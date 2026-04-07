@@ -11,8 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { RichTextEditor } from "@/components/email/rich-text-editor";
 import { useErrors } from "@/hooks/use-errors";
 import { EmailSignature } from "@/types/crm";
 import { toast } from "sonner";
@@ -91,17 +91,12 @@ export function EditSignatureDialog({
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="sig-content">Signature</Label>
-                        <Textarea
-                            id="sig-content"
-                            placeholder={"— Harshit Singh\nProduct Designer · LinkedIn"}
+                        <RichTextEditor
                             value={content}
-                            onChange={(e) => setContent(e.target.value)}
+                            onChange={setContent}
+                            placeholder="— Your Name&#10;Title · LinkedIn"
+                            minHeight={140}
                             disabled={loading}
-                            rows={6}
-                            className="font-mono text-sm resize-none"
-                            autoCorrect="off"
-                            autoCapitalize="off"
-                            spellCheck={false}
                         />
                     </div>
 

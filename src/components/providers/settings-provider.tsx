@@ -4,12 +4,6 @@ import { invoke } from "@tauri-apps/api/core";
 export interface Settings {
     [key: string]: string | undefined;
 
-    // AI
-    ai_provider?: "gemini" | "ollama" | "openrouter";
-    ai_model?: string;
-    ai_base_url?: string;
-    ai_temperature?: string;
-
     // Appearance
     theme_mode?: "light" | "dark" | "system";
 

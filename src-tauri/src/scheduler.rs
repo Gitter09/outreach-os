@@ -2,6 +2,7 @@ use anyhow::Result;
 use jobdex_core::db::Db;
 use jobdex_core::email_service::EmailService;
 use sqlx::Row;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tokio::time;
@@ -20,7 +21,10 @@ struct PendingEmail {
     subject: String,
     body: String,
     to_email: Option<String>,
+    attachment_paths: String,
 }
+
+static SHUTDOWN_FLAG: AtomicBool = AtomicBool::new(false);
 
 pub fn start_email_scheduler(app_handle: AppHandle, db: Db) {
     tauri::async_runtime::spawn(async move {
@@ -30,6 +34,12 @@ pub fn start_email_scheduler(app_handle: AppHandle, db: Db) {
         loop {
             interval.tick().await;
 
+            if SHUTDOWN_FLAG.load(Ordering::Relaxed) {
+                #[cfg(debug_assertions)]
+                eprintln!("Scheduler shutting down — app is closing");
+                break;
+            }
+
             if let Err(_e) = check_and_send_scheduled_emails(&app_handle, &db, &email_service).await
             {
                 #[cfg(debug_assertions)]
@@ -37,6 +47,10 @@ pub fn start_email_scheduler(app_handle: AppHandle, db: Db) {
             }
         }
     });
+}
+
+pub fn stop_email_scheduler() {
+    SHUTDOWN_FLAG.store(true, Ordering::Relaxed);
 }
 
 async fn check_and_send_scheduled_emails(
@@ -48,15 +62,16 @@ async fn check_and_send_scheduled_emails(
     // We join with contacts to get the recipient email address
     let rows = sqlx::query(
         r#"
-        SELECT 
+        SELECT
             s.id as schedule_id,
             s.account_id,
             s.subject,
             s.body,
-            c.email as to_email
+            c.email as to_email,
+            s.attachment_paths
         FROM scheduled_emails s
         JOIN contacts c ON s.contact_id = c.id
-        WHERE s.status = 'pending' 
+        WHERE s.status = 'pending'
         AND datetime(s.scheduled_at) <= CURRENT_TIMESTAMP
         "#,
     )
@@ -71,6 +86,7 @@ async fn check_and_send_scheduled_emails(
             subject: row.get("subject"),
             body: row.get("body"),
             to_email: row.get("to_email"),
+            attachment_paths: row.get::<Option<String>, _>("attachment_paths").unwrap_or_else(|| "[]".to_string()),
         })
         .collect();
 
@@ -104,8 +120,10 @@ async fn check_and_send_scheduled_emails(
         };
 
         // 2. Attempt to send
+        let paths: Vec<String> =
+            serde_json::from_str(&email.attachment_paths).unwrap_or_default();
         match email_service
-            .send_email(&email.account_id, &to_email, &email.subject, &email.body)
+            .send_email(&email.account_id, &to_email, &email.subject, &email.body, paths)
             .await
         {
             Ok(_message_id) => {

@@ -489,7 +489,7 @@ export function ContactsPage() {
                                                         <div className="flex flex-col">
                                                             <span>{contact.first_name} {contact.last_name}</span>
                                                             <span className="text-xs text-muted-foreground font-normal">
-                                                                {contact.title && contact.company ? `${contact.title} at ${contact.company}` : (contact.title || contact.company || "VCReach Personalizer Ready")}
+                                                                {contact.title && contact.company ? `${contact.title} at ${contact.company}` : (contact.title || contact.company || "Add title or company")}
                                                             </span>
                                                             {contact.tags && contact.tags.length > 0 && (
                                                                 <div className="flex gap-1 flex-wrap mt-1">

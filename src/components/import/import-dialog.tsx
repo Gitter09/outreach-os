@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Upload, FileSpreadsheet, Loader2, CheckCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useErrors } from "@/hooks/use-errors";
 
 interface ImportDialogProps {
@@ -38,6 +38,14 @@ interface ImportAnalysis {
     duplicate_count: number;
 }
 
+interface ImportResult {
+    imported: number;
+    skipped: number;
+    merged: number;
+    failed: number;
+    errors: string[];
+}
+
 interface ColumnMapping {
     first_name: number | null;
     last_name: number | null;
@@ -45,6 +53,8 @@ interface ColumnMapping {
     linkedin_url: number | null;
     company: number | null;
     title: number | null;
+    location: number | null;
+    company_website: number | null;
 }
 
 export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDialogProps) {
@@ -55,7 +65,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
     const [importing, setImporting] = useState(false); // Used for both import & analysis loading states if needed, but we have specific ones.
     const [analyzing, setAnalyzing] = useState(false);
     const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
-    const [importResult, setImportResult] = useState<number | null>(null);
+    const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
     const [mapping, setMapping] = useState<ColumnMapping>({
         first_name: null,
@@ -64,6 +74,8 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
         linkedin_url: null,
         company: null,
         title: null,
+        location: null,
+        company_website: null,
     });
 
     const handleSelectFile = async () => {
@@ -101,6 +113,10 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                         autoMapping.company = index;
                     } else if (lower.includes("title") || lower.includes("position") || lower.includes("role")) {
                         autoMapping.title = index;
+                    } else if (lower.includes("location") || lower.includes("city") || lower.includes("region")) {
+                        autoMapping.location = index;
+                    } else if (lower.includes("website") || lower === "url" || lower.includes("company url")) {
+                        autoMapping.company_website = index;
                     }
                 });
                 setMapping(autoMapping);
@@ -133,12 +149,12 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
 
         setImporting(true);
         try {
-            const count = await invoke<number>("import_contacts", {
+            const result = await invoke<ImportResult>("import_contacts", {
                 filePath,
                 mapping,
                 mode,
             });
-            setImportResult(count);
+            setImportResult(result);
             onImportComplete?.();
         } catch (err) {
             handleError(err, "Import failed");
@@ -158,6 +174,8 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
             linkedin_url: null,
             company: null,
             title: null,
+            location: null,
+            company_website: null,
         });
         setImportResult(null);
         onOpenChange(false);
@@ -186,11 +204,36 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                 {importResult !== null ? (
                     /* Success State */
                     <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                        <CheckCircle className="h-16 w-16 text-green-500" />
-                        <h3 className="text-xl font-semibold">Import Complete!</h3>
-                        <p className="text-muted-foreground">
-                            Successfully imported <strong>{importResult}</strong> contacts.
-                        </p>
+                        {importResult.failed > 0 ? (
+                            <AlertCircle className="h-16 w-16 text-amber-500" />
+                        ) : (
+                            <CheckCircle className="h-16 w-16 text-green-500" />
+                        )}
+                        <h3 className="text-xl font-semibold">
+                            {importResult.failed > 0 ? "Import Complete with Warnings" : "Import Complete!"}
+                        </h3>
+                        <div className="text-center space-y-1">
+                            <p className="text-muted-foreground">
+                                <strong>{importResult.imported}</strong> new contacts imported
+                                {importResult.merged > 0 && (
+                                    <span>, <strong>{importResult.merged}</strong> merged</span>
+                                )}
+                                {importResult.skipped > 0 && (
+                                    <span>, <strong>{importResult.skipped}</strong> skipped</span>
+                                )}
+                                {importResult.failed > 0 && (
+                                    <span className="text-amber-600">, <strong>{importResult.failed}</strong> failed</span>
+                                )}
+                                .
+                            </p>
+                            {importResult.errors.length > 0 && (
+                                <div className="mt-4 max-h-32 overflow-y-auto text-xs text-left bg-muted/50 p-3 rounded border max-w-md">
+                                    {importResult.errors.map((err, i) => (
+                                        <div key={i} className="text-amber-600 py-0.5">{err}</div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <Button onClick={handleClose}>Done</Button>
                     </div>
                 ) : !preview ? (
@@ -266,7 +309,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                         <div className="space-y-4">
                             <h4 className="font-medium">Map Columns</h4>
                             <div className="grid grid-cols-2 gap-4">
-                                {(["first_name", "last_name", "email", "linkedin_url", "company", "title"] as const).map(field => (
+                                {(["first_name", "last_name", "email", "linkedin_url", "company", "title", "location", "company_website"] as const).map(field => (
                                     <div key={field} className="space-y-1">
                                         <Label className="text-xs uppercase text-muted-foreground">
                                             {field.replace("_", " ")}

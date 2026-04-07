@@ -7,8 +7,10 @@ import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
 import { ImportDialog } from "@/components/import/import-dialog";
 import { ComposeEmailDialog } from "@/components/email/compose-email-dialog";
 import { WhatsNewModal } from "@/components/whats-new-modal";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import { useKeyboardShortcuts, ShortcutActionMap } from "@/hooks/use-keyboard-shortcuts";
 import type { Contact } from "@/types/crm";
 
@@ -31,6 +33,7 @@ export function AppLayout() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [newContactStatusId, setNewContactStatusId] = useState<string | undefined>(undefined);
     const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+    const [onboardingOpen, setOnboardingOpen] = useState(false);
     const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
     const [updateDismissed, setUpdateDismissed] = useState(false);
     const location = useLocation();
@@ -66,10 +69,17 @@ export function AppLayout() {
             try {
                 const currentVersion = await getVersion();
 
-                // What's New modal: show if this version hasn't been seen yet
+                // Onboarding vs What's New priority
                 const settings = await invoke<Record<string, string>>("get_settings");
+                const onboardingDone = settings["onboarding_complete"] === "true";
                 const lastSeen = settings["last_seen_version"];
-                if (!lastSeen || lastSeen !== currentVersion) {
+
+                if (!onboardingDone || import.meta.env.DEV) {
+                    // True first launch → show onboarding
+                    // DEV: always show for iteration
+                    setOnboardingOpen(true);
+                } else if (!lastSeen || lastSeen !== currentVersion) {
+                    // Returning user, new version → show What's New
                     setWhatsNewOpen(true);
                 }
 
@@ -94,6 +104,37 @@ export function AppLayout() {
             } catch {
                 // ignore
             }
+        }
+    };
+
+    const handleOnboardingComplete = async (action: "import" | "add_contact" | "explore") => {
+        setOnboardingOpen(false);
+
+        // DEV: show What's New after onboarding so it can be iterated on
+        if (import.meta.env.DEV) {
+            setWhatsNewOpen(true);
+        }
+
+        try {
+            const v = await getVersion();
+            await invoke("save_setting", { key: "onboarding_complete", value: "true" });
+            await invoke("save_setting", { key: "last_seen_version", value: v });
+        } catch {
+            // best-effort
+        }
+
+        // Post-onboarding hint toast
+        const isMac = navigator.platform.toUpperCase().includes("MAC");
+        const key = isMac ? "\u2318K" : "Ctrl+K";
+        setTimeout(() => {
+            toast(`press ${key} anytime \u2014 it finds everything.`, { duration: 5000 });
+        }, 800);
+
+        // Trigger the user's chosen action
+        if (action === "import") {
+            setImportOpen(true);
+        } else if (action === "add_contact") {
+            setAddContactOpen(true);
         }
     };
 
@@ -171,6 +212,9 @@ export function AppLayout() {
                 }}
             />
             <ShortcutHelpDialog open={shortcutHelpOpen} onOpenChange={setShortcutHelpOpen} />
+
+            {/* Onboarding — first launch only, z-60 (below lock screen z-100) */}
+            {onboardingOpen && <OnboardingFlow onComplete={handleOnboardingComplete} />}
         </div>
     );
 }

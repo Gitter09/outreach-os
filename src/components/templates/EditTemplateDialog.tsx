@@ -9,12 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { RichTextEditor, type Editor } from "@/components/email/rich-text-editor";
 import { invoke } from "@tauri-apps/api/core";
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { useErrors } from "@/hooks/use-errors";
 import { EmailTemplate } from "@/types/crm";
 import { toast } from "sonner";
+import { Paperclip, X } from "lucide-react";
 
 interface EditTemplateDialogProps {
     open: boolean;
@@ -34,10 +36,11 @@ export function EditTemplateDialog({
     const [name, setName] = useState("");
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
+    const [attachments, setAttachments] = useState<string[]>([]);
 
     // Refs and focus tracking for variable insertion into the correct field
     const subjectRef = useRef<HTMLInputElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const editorRef = useRef<Editor | null>(null);
     const [focusedField, setFocusedField] = useState<"subject" | "body">("body");
 
     const AVAILABLE_VARIABLES = ["first_name", "last_name", "company", "title", "location"];
@@ -48,10 +51,12 @@ export function EditTemplateDialog({
                 setName(template.name);
                 setSubject(template.subject || "");
                 setBody(template.body || "");
+                setAttachments(template.attachment_paths ?? []);
             } else {
                 setName("");
                 setSubject("");
                 setBody("");
+                setAttachments([]);
             }
         }
     }, [open, template]);
@@ -71,17 +76,26 @@ export function EditTemplateDialog({
                 input.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
             }, 0);
         } else {
-            const textarea = textareaRef.current;
-            if (!textarea) return;
-            const start = textarea.selectionStart ?? body.length;
-            const end = textarea.selectionEnd ?? body.length;
-            const newBody = body.substring(0, start) + textToInsert + body.substring(end);
-            setBody(newBody);
-            setTimeout(() => {
-                textarea.focus();
-                textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
-            }, 0);
+            editorRef.current?.chain().focus().insertContent(textToInsert).run();
         }
+    };
+
+    const handleAttachFiles = async () => {
+        try {
+            const selected = await openFileDialog({ multiple: true });
+            if (!selected) return;
+            const paths = Array.isArray(selected) ? selected : [selected];
+            setAttachments(prev => {
+                const existing = new Set(prev);
+                return [...prev, ...paths.filter(p => !existing.has(p))];
+            });
+        } catch (err) {
+            handleError(err, "Failed to open file picker");
+        }
+    };
+
+    const removeAttachment = (path: string) => {
+        setAttachments(prev => prev.filter(p => p !== path));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -98,6 +112,7 @@ export function EditTemplateDialog({
                 name,
                 subject: subject || null,
                 body: body || null,
+                attachmentPaths: attachments,
             });
             toast.success(template ? "Template updated" : "Template created");
             onSuccess();
@@ -149,18 +164,14 @@ export function EditTemplateDialog({
 
                     <div className="grid gap-2">
                         <Label htmlFor="body">Email Body</Label>
-                        <Textarea
-                            id="body"
-                            ref={textareaRef}
-                            placeholder="Write your template here..."
+                        <RichTextEditor
                             value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            onFocus={() => setFocusedField("body")}
+                            onChange={setBody}
+                            placeholder="Write your template here..."
+                            minHeight={240}
                             disabled={isLoading}
-                            rows={10}
-                            autoCorrect="off"
-                            autoCapitalize="off"
-                            spellCheck={false}
+                            editorRef={editorRef}
+                            onFocus={() => setFocusedField("body")}
                         />
                         <div className="flex flex-wrap gap-2 mt-1 items-center">
                             <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mr-1">Insert:</span>
@@ -174,6 +185,39 @@ export function EditTemplateDialog({
                                     {`{{${v}}}`}
                                 </Badge>
                             ))}
+                        </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Attachments</Label>
+                        <div className="flex flex-wrap gap-2 items-center">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleAttachFiles}
+                                disabled={isLoading}
+                                className="h-7 text-xs gap-1.5"
+                            >
+                                <Paperclip className="h-3 w-3" />
+                                Attach files
+                            </Button>
+                            {attachments.map(path => {
+                                const filename = path.split(/[\\/]/).pop() ?? path;
+                                const truncated = filename.length > 28 ? filename.slice(0, 25) + "…" : filename;
+                                return (
+                                    <Badge key={path} variant="secondary" className="gap-1 pr-1 text-xs font-normal">
+                                        {truncated}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeAttachment(path)}
+                                            className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </Badge>
+                                );
+                            })}
                         </div>
                     </div>
 

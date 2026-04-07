@@ -17,6 +17,8 @@ pub struct ColumnMapping {
     pub linkedin_url: Option<usize>,
     pub company: Option<usize>,
     pub title: Option<usize>,
+    pub location: Option<usize>,
+    pub company_website: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,6 +29,8 @@ pub struct ImportedContact {
     pub linkedin_url: Option<String>,
     pub company: Option<String>,
     pub title: Option<String>,
+    pub location: Option<String>,
+    pub company_website: Option<String>,
 }
 
 /// Reads a file and returns a preview (headers + sample rows)
@@ -201,6 +205,16 @@ pub fn parse_file_with_mapping(
                     .filter(|s| !s.is_empty()),
                 title: mapping
                     .title
+                    .and_then(|i| row.get(i))
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
+                location: mapping
+                    .location
+                    .and_then(|i| row.get(i))
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
+                company_website: mapping
+                    .company_website
                     .and_then(|i| row.get(i))
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty()),

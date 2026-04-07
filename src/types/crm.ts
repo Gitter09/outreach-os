@@ -95,6 +95,7 @@ export interface EmailTemplate {
     name: string;
     subject?: string;
     body?: string;
+    attachment_paths: string[];
     created_at: string;
     updated_at: string;
 }
@@ -115,6 +116,13 @@ export interface EmailSignature {
     updatedAt: string;
 }
 
+export interface ImportSummary {
+    contactsAdded: number;
+    contactsUpdated: number;
+    statusesAdded: number;
+    tagsAdded: number;
+}
+
 export interface ScheduledEmail {
     id: string;
     contactId: string;
@@ -127,4 +135,5 @@ export interface ScheduledEmail {
     status: string; // 'pending', 'sent', 'failed'
     errorMessage?: string;
     createdAt: string;
+    attachmentPaths?: string[];
 }

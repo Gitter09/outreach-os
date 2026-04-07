@@ -6,6 +6,57 @@ use anyhow::{anyhow, Result};
 use chrono::Utc;
 use sqlx::Row;
 
+/// A resolved file to attach to an outgoing email.
+/// Constructed from a raw path; Rust reads bytes at send time.
+#[derive(Debug, Clone)]
+pub struct OutgoingAttachment {
+    pub path: String,
+    pub filename: String,
+    pub mime_type: String,
+}
+
+fn mime_from_extension(filename: &str) -> &'static str {
+    let ext = std::path::Path::new(filename)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    match ext.as_str() {
+        "pdf" => "application/pdf",
+        "doc" => "application/msword",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xls" => "application/vnd.ms-excel",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "ppt" => "application/vnd.ms-powerpoint",
+        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "txt" => "text/plain",
+        "csv" => "text/csv",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "zip" => "application/zip",
+        _ => "application/octet-stream",
+    }
+}
+
+pub fn resolve_attachment(path: &str) -> Result<OutgoingAttachment> {
+    let p = std::path::Path::new(path);
+    if !p.exists() {
+        return Err(anyhow!("Attachment not found: {}", path));
+    }
+    let filename = p
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| anyhow!("Cannot determine filename for: {}", path))?
+        .to_string();
+    let mime_type = mime_from_extension(&filename).to_string();
+    Ok(OutgoingAttachment {
+        path: path.to_string(),
+        filename,
+        mime_type,
+    })
+}
+
 pub struct EmailService {
     db: Db,
     gmail: GmailClient,
@@ -295,18 +346,24 @@ impl EmailService {
         to: &str,
         subject: &str,
         body: &str,
+        attachment_paths: Vec<String>,
     ) -> Result<String> {
+        let attachments: Vec<OutgoingAttachment> = attachment_paths
+            .iter()
+            .map(|p| resolve_attachment(p))
+            .collect::<Result<_>>()?;
+
         let account = self.get_account(account_id).await?;
 
         let message_id = match account.provider.as_str() {
             "gmail" => {
                 self.gmail
-                    .send_email(&account.access_token, to, subject, body)
+                    .send_email(&account.access_token, to, subject, body, &attachments)
                     .await?
             }
             "outlook" => {
                 self.outlook
-                    .send_email(&account.access_token, to, subject, body)
+                    .send_email(&account.access_token, to, subject, body, &attachments)
                     .await?
             }
             _ => return Err(anyhow!("Unknown provider")),
@@ -324,9 +381,19 @@ impl EmailService {
             Err(e) => {
                 let token_expired = e.to_string().contains("TOKEN_EXPIRED")
                     || e.to_string().contains("Token refresh failed");
+                // get_account failed so we have no account struct; fetch email directly
+                let account_email = sqlx::query_scalar::<_, String>(
+                    "SELECT email FROM email_accounts WHERE id = ?"
+                )
+                .bind(account_id)
+                .fetch_optional(self.db.pool())
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_default();
                 return Ok(SyncResult {
                     account_id: account_id.to_string(),
-                    account_email: String::new(),
+                    account_email,
                     provider: String::new(),
                     synced_count: 0,
                     skipped_count: 0,
@@ -602,13 +669,21 @@ impl EmailService {
         subject: &str,
         body: &str,
         scheduled_at: i64,
+        attachment_paths: Vec<String>,
     ) -> Result<String> {
+        for path in &attachment_paths {
+            if !std::path::Path::new(path).exists() {
+                return Err(anyhow!("Attachment not found: {}", path));
+            }
+        }
+
         let id = uuid::Uuid::new_v4().to_string();
         let scheduled_time = chrono::DateTime::from_timestamp(scheduled_at, 0)
             .ok_or_else(|| anyhow!("Invalid timestamp"))?;
+        let attachments_json = serde_json::to_string(&attachment_paths)?;
 
         sqlx::query(
-            "INSERT INTO scheduled_emails (id, contact_id, account_id, subject, body, scheduled_at, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)"
+            "INSERT INTO scheduled_emails (id, contact_id, account_id, subject, body, scheduled_at, status, attachment_paths, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)"
         )
         .bind(&id)
         .bind(contact_id)
@@ -616,6 +691,7 @@ impl EmailService {
         .bind(subject)
         .bind(body)
         .bind(scheduled_time)
+        .bind(&attachments_json)
         .execute(self.db.pool())
         .await?;
 

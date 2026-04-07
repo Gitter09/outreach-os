@@ -66,3 +66,232 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Onboarding Animations (ob-* prefix) ─────────────────────────── */
+
+/* SVG handwritten path draw */
+@keyframes ob-svg-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* SVG fill fade-in after stroke completes */
+@keyframes ob-svg-fill {
+  to {
+    fill-opacity: 1;
+  }
+}
+
+/* Typewriter cursor blink */
+@keyframes ob-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Text line fade-up reveal */
+@keyframes ob-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Privacy lines slide-in from left */
+@keyframes ob-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Shield icon pop entrance with overshoot */
+@keyframes ob-shield-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Kanban column fade-in */
+@keyframes ob-column-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Kanban card appear */
+@keyframes ob-card-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Kanban card slide between columns */
+@keyframes ob-card-slide {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--slide-from, -140px));
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Green shimmer on Interested card */
+@keyframes ob-shimmer {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px rgba(34, 197, 94, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+/* Overlay dissolve-out */
+@keyframes ob-dissolve {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Utility classes */
+.ob-stagger {
+  opacity: 0;
+  animation: ob-fade-up 0.65s ease-out forwards;
+}
+
+.ob-slide-left {
+  opacity: 0;
+  animation: ob-slide-left 0.5s ease-out forwards;
+}
+
+.ob-shield-pop {
+  opacity: 0;
+  animation: ob-shield-pop 0.6s ease-out forwards;
+}
+
+.ob-column-fade {
+  opacity: 0;
+  animation: ob-column-fade 0.4s ease-out forwards;
+}
+
+.ob-card-appear {
+  opacity: 0;
+  animation: ob-card-appear 0.4s ease-out forwards;
+}
+
+.ob-card-slide {
+  opacity: 0;
+  animation: ob-card-slide 0.8s ease-in-out forwards;
+}
+
+.ob-shimmer {
+  animation: ob-shimmer 2s ease-in-out infinite;
+}
+
+.ob-dissolve-out {
+  animation: ob-dissolve 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+.ob-cursor {
+  animation: ob-blink 1s step-end infinite;
+}
+
+/* Action card hover/active */
+.ob-action-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.ob-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.ob-action-card:active {
+  transform: scale(0.97);
+}
+
+/* Reduced motion — disable all onboarding animations */
+@media (prefers-reduced-motion: reduce) {
+  .ob-stagger,
+  .ob-slide-left,
+  .ob-shield-pop,
+  .ob-column-fade,
+  .ob-card-appear,
+  .ob-card-slide,
+  .ob-dissolve-out {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .ob-shimmer {
+    animation: none !important;
+  }
+  .ob-cursor {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .ob-action-card {
+    transition: none !important;
+  }
+}
+
+/* ─── Tiptap rich text editor content styles ─────────────────────────────── */
+.tiptap { overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
+.tiptap p { margin: 0 0 0.5em 0; }
+.tiptap p:last-child { margin-bottom: 0; }
+.tiptap ul { list-style-type: disc; padding-left: 1.5em; margin: 0.25em 0; }
+.tiptap ol { list-style-type: decimal; padding-left: 1.5em; margin: 0.25em 0; }
+.tiptap ul li, .tiptap ol li { margin: 0.15em 0; }
+.tiptap strong { font-weight: 600; }
+.tiptap em { font-style: italic; }
+.tiptap u { text-decoration: underline; }
+.tiptap s { text-decoration: line-through; }
+.tiptap .is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

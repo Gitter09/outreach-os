@@ -162,17 +162,6 @@ pub mod models {
         pub position: i32,
     }
 
-    #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-    pub struct Company {
-        pub id: String,
-        pub name: String,
-        pub domain: Option<String>,
-        pub industry: Option<String>,
-        pub description: Option<String>,
-        pub created_at: DateTime<Utc>,
-        pub updated_at: DateTime<Utc>,
-    }
-
     #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
     pub struct Tag {
         pub id: String,
@@ -266,6 +255,7 @@ pub mod models {
         pub name: String,
         pub subject: Option<String>,
         pub body: Option<String>,
+        pub attachment_paths: String,
         pub created_at: DateTime<Utc>,
         pub updated_at: DateTime<Utc>,
     }

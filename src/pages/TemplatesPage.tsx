@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Plus, Pencil, Trash2, Mail } from "lucide-react";
+import { FileText, Plus, Pencil, Trash2, Mail, Paperclip } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -125,28 +125,55 @@ export function TemplatesPage() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1 overflow-hidden relative group">
-                                    <div className="text-sm text-muted-foreground line-clamp-5 whitespace-pre-wrap">
-                                        {template.body || "No body content"}
+                                    <div className="text-sm text-muted-foreground line-clamp-5">
+                                        {template.body
+                                            ? template.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || "No body content"
+                                            : "No body content"}
                                     </div>
                                     <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background to-transparent" />
                                 </CardContent>
-                                <div className="p-4 pt-0 flex justify-end gap-2 border-t mt-auto">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleEdit(template)}
-                                        className="h-8 w-8"
-                                    >
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleDeleteConfirm(template)}
-                                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                <div className="px-3 py-2 flex items-center justify-between border-t mt-auto gap-2">
+                                    <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                                        {template.attachment_paths?.length > 0 && (
+                                            <>
+                                                <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                {template.attachment_paths.length === 1 ? (
+                                                    <button
+                                                        className="text-xs text-muted-foreground truncate hover:text-foreground hover:underline transition-colors text-left"
+                                                        title={template.attachment_paths[0].split(/[\\/]/).pop()}
+                                                        onClick={() => invoke("open_attachment", { filePath: template.attachment_paths[0] }).catch(e => handleError(e, "Could not open file"))}
+                                                    >
+                                                        {(() => { const n = template.attachment_paths[0].split(/[\\/]/).pop() ?? ""; return n.length > 24 ? n.slice(0, 21) + "…" : n; })()}
+                                                    </button>
+                                                ) : (
+                                                    <span
+                                                        className="text-xs text-muted-foreground truncate"
+                                                        title={template.attachment_paths.map(p => p.split(/[\\/]/).pop()).join(", ")}
+                                                    >
+                                                        {template.attachment_paths.length} attachments
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2 shrink-0">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleEdit(template)}
+                                            className="h-8 w-8"
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleDeleteConfirm(template)}
+                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </Card>
                         ))}
