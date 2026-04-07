@@ -121,6 +121,10 @@ export interface ImportSummary {
     contactsUpdated: number;
     statusesAdded: number;
     tagsAdded: number;
+    eventsRestored: number;
+    templatesRestored: number;
+    signaturesRestored: number;
+    scheduledRestored: number;
 }
 
 export interface ScheduledEmail {

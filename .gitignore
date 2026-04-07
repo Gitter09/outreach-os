@@ -39,6 +39,7 @@ src-tauri/storage/
 # Archived docs
 _archive/
 agent.md
+CLEANUP_PLAN.md
 
 # Release notes (local only)
 release_notes/

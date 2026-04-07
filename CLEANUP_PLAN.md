@@ -85,99 +85,106 @@ Comprehensive 6-phase cleanup plan for the JobDex codebase (Tauri 2 + React 19 +
 
 ---
 
-## Phase 3 — Bug Fixes (Pending)
+## Phase 3 — Bug Fixes ✅ COMPLETE
 
 ### 3.1 Scheduler race condition
 - **File:** `src-tauri/src/scheduler.rs`
-- **Problem:** The scheduler spawns threads for email sending without proper synchronization. If the app closes while emails are being sent, threads may be orphaned or data may be partially written
-- **Fix:** Add proper thread joining on shutdown, use `tokio::task::JoinHandle` instead of bare `std::thread`, and add a shutdown flag (`AtomicBool`) that threads check before committing
+- **Before:** Scheduler runs in a fire-and-forget loop with no shutdown mechanism. If the app closes mid-send, the task is orphaned.
+- **After:** Added `AtomicBool` shutdown flag (`SHUTDOWN_FLAG`). Scheduler checks it each tick and breaks cleanly. `stop_email_scheduler()` is called when the app exits via tray close.
+- **User impact:** Clean shutdown — no orphaned threads, no partially-written email data
 - **Risk:** Medium — touches async/threading logic
 
-### 3.2 File deletion order
-- **File:** `src-tauri/src/lib.rs` (related to file/contact deletion commands)
-- **Problem:** When deleting contacts or files, dependent records (contact_events, contact_tags, email associations) may not be cleaned up in the correct order, potentially leaving orphaned records
-- **Fix:** Ensure cascading deletes happen in the correct order: dependent tables first, then the parent record. Add explicit `DELETE FROM contact_events WHERE contact_id = ?` and `DELETE FROM contact_tags WHERE contact_id = ?` before `DELETE FROM contacts WHERE id = ?` if not already handled by foreign key constraints
+### 3.2 Contact deletion order (cascading deletes)
+- **File:** `src-tauri/src/lib.rs` (`delete_contact` command, lines ~730-755)
+- **Before:** Only deleted from `contacts` table, leaving orphaned records in `contact_events`, `contact_tags`, `contact_files`, and `scheduled_emails`. No FK constraints exist to enforce this.
+- **After:** Wraps in a transaction and cascades in correct dependency order: `contact_events` → `contact_tags` → `contact_files` → `scheduled_emails` → `contacts`
+- **User impact:** Deleting a contact now fully cleans up all associated data — no orphaned records
 - **Risk:** Medium — data integrity concern
 
 ### 3.3 Import error swallowing
-- **File:** `src-tauri/src/lib.rs` (`import_contacts` function)
-- **Problem:** During bulk import, if a single contact insert fails, the error is silently ignored (`if result.is_ok() { count += 1; }`). The user gets a success count but has no idea some contacts failed
-- **Fix:** Track failed inserts separately and return a richer result: `{ imported: usize, skipped: usize, failed: usize, errors: Vec<String> }`. Show failures in the UI
-- **Risk:** Medium — changes the return type, requires frontend update
+- **File:** `src-tauri/src/lib.rs` (`import_contacts` function, lines ~1821-1953)
+- **Before:** Insert errors silently ignored with `if result.is_ok() { count += 1; }`. User only saw a total count with no idea some contacts failed.
+- **After:** New `ImportResult` struct with `imported`, `skipped`, `merged`, `failed`, and `errors` fields. Frontend displays full breakdown with error details.
+- **User impact:** User now sees "3 imported, 2 merged, 1 skipped, 2 failed" with specific error messages for each failure
+- **Risk:** Medium — changes the return type, required frontend update
 
 ### 3.4 Update check rate limiting
-- **File:** `src-tauri/src/lib.rs` or related update checking code
-- **Problem:** The `check_for_updates` command (or equivalent) may be called too frequently without client-side rate limiting, potentially hitting GitHub API rate limits or causing unnecessary network requests
-- **Fix:** Add a simple in-memory cache with a TTL (e.g., 1 hour) so repeated calls within the window return the cached result instead of hitting the network
+- **File:** `src-tauri/src/lib.rs` (`check_for_update` command, lines ~2445-2515)
+- **Before:** Every call hits GitHub API directly — no caching, risks hitting rate limits.
+- **After:** Added `Mutex<Option<(String, Instant)>>` in-memory cache with 1-hour TTL. Repeated calls within the window return the cached result.
+- **User impact:** Faster response for repeated checks, no risk of GitHub API rate limiting
 - **Risk:** Low
 
----
-
-## Phase 4 — Data Integrity (Pending)
-
-### 4.1 Expand `export_all_data` scope
-- **File:** `src-tauri/src/lib.rs` (`export_all_data_to_path` command)
-- **Current scope:** Contacts, statuses, tags
-- **Missing:** May not include contact_events, email_accounts, email_templates, email_signatures, settings, contact_tags junction data
-- **Fix:** Audit the export function and ensure ALL user data tables are included. Add a version field to the export format for future compatibility
-- **Risk:** Medium — changes export format
-
-### 4.2 Expand `clear_all_data` scope
-- **File:** `src-tauri/src/lib.rs` (`clear_all_data` command)
-- **Current scope:** Contacts, statuses, tags (based on the confirmation dialog text)
-- **Missing:** May not clear contact_events, email-related tables, settings, or other auxiliary data
-- **Fix:** Audit and ensure ALL user data tables are cleared. Update the confirmation dialog text to accurately reflect what gets deleted
-- **Risk:** Medium — destructive operation, must be correct
+**Verification:** `cargo check` ✅ | `npx tsc --noEmit` ✅
 
 ---
 
-## Phase 5 — Placeholder Pages (Pending — UX Decision Needed)
+## Phase 4 — Data Integrity ✅ COMPLETE
+
+### 4.1 Expand `export_all_data` scope (5 → 13 tables)
+- **File:** `src-tauri/src/lib.rs` (`export_all_data` command, lines ~1363-1619)
+- **Before:** Only exported contacts, statuses, tags, contact_tags, settings
+- **After:** Now also exports: contact_events, contact_files, email_accounts, email_threads, email_messages, email_attachments, scheduled_emails, email_templates, email_signatures
+- **Export version:** Bumped from `1.1` → `1.2`
+- **User impact:** Backups now capture the full state of the CRM including email subsystem data
+- **Risk:** Medium — changes export format (backward-compatible, old versions still readable)
+
+### 4.2 Expand `clear_all_data` scope (4 → 13 tables)
+- **File:** `src-tauri/src/lib.rs` (`clear_all_data` command, lines ~1344-1380)
+- **Before:** Only cleared contacts, statuses, tags, contact_tags
+- **After:** Now also clears: contact_events, contact_files, email_accounts, email_threads, email_messages, email_attachments, scheduled_emails, email_templates, email_signatures
+- **Intentionally NOT cleared:** `settings` — user keeps their config on reset
+- **Delete order:** Dependents first, then parents (avoids orphaned records since no FK constraints)
+- **User impact:** Factory reset now truly resets everything except app settings
+- **Risk:** Medium — destructive operation
+
+### 4.3 Expand `import_all_data` scope (5 → 9 tables)
+- **File:** `src-tauri/src/lib.rs` (`import_all_data` command, lines ~1646-2020)
+- **Before:** Only restored statuses, tags, contacts, contact_tags, settings
+- **After:** Now also restores: contact_events, email_templates, email_signatures, scheduled_emails
+- **Intentionally NOT restored:** email_accounts, email_threads, email_messages, email_attachments — contain OAuth tokens and message data that shouldn't be blindly merged from backup (security + referential integrity)
+- **Version support:** Extended to `1.2`
+- **ImportSummary:** Expanded with `eventsRestored`, `templatesRestored`, `signaturesRestored`, `scheduledRestored`
+- **User impact:** Restoring from backup now recovers more of the user's data
+- **Risk:** Medium
+
+### 4.4 UI updates
+- **`src/types/crm.ts:119`** — `ImportSummary` interface expanded with 4 new fields
+- **`src/pages/SettingsPage.tsx:216-230`** — Toast now shows full breakdown of what was restored
+- **`src/pages/SettingsPage.tsx:295, 281`** — Confirmation dialog and card text updated to accurately reflect the expanded scope
+- **User impact:** Clear, accurate messaging about what gets deleted/restored
+
+**Verification:** `cargo check` ✅ | `npx tsc --noEmit` ✅
+
+---
+
+## Phase 5 — Placeholder Pages ⏭️ SKIPPED
 
 ### 5.1 NotesPage
 - **File:** `src/pages/NotesPage.tsx`
-- **Current state:** Placeholder/empty page with no functionality
-- **Options:**
-  1. **Remove** — delete the route, sidebar link, and file entirely
-  2. **Keep as placeholder** — leave it but mark as "Coming Soon" with a clear UX
-  3. **Build minimal v1** — implement basic note CRUD with contact linking
-- **Decision needed from you**
+- **Decision:** Leave as-is. No code changes.
 
 ### 5.2 TasksPage
 - **File:** `src/pages/TasksPage.tsx`
-- **Current state:** Placeholder/empty page with no functionality
-- **Options:**
-  1. **Remove** — delete the route, sidebar link, and file entirely
-  2. **Keep as placeholder** — leave it but mark as "Coming Soon" with a clear UX
-  3. **Build minimal v1** — implement basic task CRUD with contact linking and due dates
-- **Decision needed from you**
+- **Decision:** Leave as-is. No code changes.
 
 ---
 
-## Phase 6 — Schema Cleanup (Pending — Highest Risk)
+## Phase 6 — Schema Cleanup ✅ COMPLETE
 
-### 6.1 Drop dead tables
-- **Audit needed:** Identify tables that exist in the database but are never queried by any command
-- **Likely candidates:** Tables created in early migrations that were later abandoned
-- **Fix:** Create a new migration that drops these tables with `IF EXISTS` guards
-- **Risk:** High — irreversible schema change
+### 6.1 Drop dead tables ✅
+- **File:** `src-core/migrations/20260407000002_drop_dead_tables.sql`
+- **Tables dropped:** `companies`, `campaigns`, `applications`, `interactions`
+- **Reason:** Created in `20260121000000_init.sql` but never referenced by any Tauri command — zero reads, zero writes
+- **Verification:** Grep across `src-tauri/src/` confirms no references to any of these four tables
+- **Risk:** High — irreversible, but mitigated by `IF EXISTS` guards and confirmed zero usage
+- **User impact:** None — these tables were never used
 
-### 6.2 Clean up `is_default` column (optional)
-- **Table:** `statuses`
-- **Column:** `is_default BOOLEAN DEFAULT FALSE`
-- **Status:** After Phase 2.6, this column is never read — default is determined by `position ASC`
-- **Options:**
-  1. **Leave it** — harmless, could be useful if explicit default control is added later
-  2. **Remove it** — cleaner schema, requires a migration
-- **Decision:** Leave it for now (your call)
+### 6.2 Clean up `is_default` column
+- **Decision:** Leave it — harmless, could be useful if explicit default control is added later
 
-### 6.3 Clean up legacy `status` text column (optional)
-- **Table:** `contacts`
-- **Column:** `status TEXT` — the legacy text status, now superseded by `status_id TEXT REFERENCES statuses(id)`
-- **Status:** Still written to for backward compatibility but the UI reads from `status_id`
-- **Options:**
-  1. **Leave it** — safety net during transition
-  2. **Remove it** — requires verifying all reads use `status_id`, then dropping the column
-- **Decision:** Defer — requires careful audit of all status reads
+### 6.3 Clean up legacy `status` text column
+- **Decision:** Leave it — safety net during transition
 
 ---
 
@@ -188,13 +195,13 @@ Phase 1 ✅ (done)
   ↓
 Phase 2 ✅ (done)
   ↓
-Phase 3 (bug fixes — independent items, can be done in any order)
+Phase 3 ✅ (done)
   ↓
-Phase 4 (data integrity — depends on Phase 3 being clean)
+Phase 4 ✅ (done)
   ↓
-Phase 5 (placeholder pages — independent, but needs your decision)
+Phase 5 ⏭️ (skipped — leave as-is per user decision)
   ↓
-Phase 6 (schema cleanup — highest risk, should be done last)
+Phase 6 ✅ (done — dropped 4 dead tables)
 ```
 
 ## Risk Summary
@@ -205,12 +212,9 @@ Phase 6 (schema cleanup — highest risk, should be done last)
 | 2 | Low | Replaces hardcoded values, fixes UI inconsistencies |
 | 3 | Medium-High | Touches threading, error handling, data flow |
 | 4 | Medium | Changes export/clear scope — must be correct |
-| 5 | Low | Depends on your decision (remove vs. build) |
-| 6 | High | Irreversible schema changes |
+| 5 | N/A | Skipped — no changes |
+| 6 | High | Irreversible schema changes (mitigated by `IF EXISTS`) |
 
-## Outstanding Decisions Needed From You
+## All Phases Complete ✅
 
-1. **NotesPage & TasksPage** — Remove, keep as "Coming Soon", or build minimal v1?
-2. **Phase 6 `is_default` column** — Leave it (current plan) or remove?
-3. **Phase 6 `status` text column** — Leave it or remove?
-4. **Execution approach** — Tackle remaining phases all at once, or phase-by-phase with review checkpoints?
+No outstanding decisions remain. The cleanup is done.

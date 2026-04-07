@@ -214,9 +214,18 @@ export function SettingsPage() {
         setImportLoading(true);
         try {
             const result = await invoke<ImportSummary>("import_all_data", { filePath: pendingImportPath });
-            toast.success(
-                `Import complete — ${result.contactsAdded} contacts added, ${result.contactsUpdated} updated.`
-            );
+            const parts = [
+                `${result.contactsAdded} contacts added`,
+                `${result.contactsUpdated} updated`,
+            ];
+            if (result.statusesAdded > 0) parts.push(`${result.statusesAdded} statuses added`);
+            if (result.tagsAdded > 0) parts.push(`${result.tagsAdded} tags added`);
+            if (result.eventsRestored > 0) parts.push(`${result.eventsRestored} events restored`);
+            if (result.templatesRestored > 0) parts.push(`${result.templatesRestored} templates restored`);
+            if (result.signaturesRestored > 0) parts.push(`${result.signaturesRestored} signatures restored`);
+            if (result.scheduledRestored > 0) parts.push(`${result.scheduledRestored} scheduled emails restored`);
+
+            toast.success(`Import complete — ${parts.join(", ")}.`);
         } catch (error) {
             handleError(error, "Import failed. The file may be invalid or corrupted.");
         } finally {
@@ -273,7 +282,7 @@ export function SettingsPage() {
                         <h4 className="font-semibold text-destructive">Factory Reset</h4>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                        Permanently delete all contacts, tags, and custom statuses. Your settings and API keys will remain untouched.
+                        Permanently delete all contacts, tags, custom statuses, email accounts, templates, signatures, and contact events. Your app settings and API keys will remain untouched.
                     </p>
                     <Button variant="destructive" className="w-full" onClick={() => setClearDialogOpen(true)}>
                         Clear All Data
@@ -303,7 +312,7 @@ export function SettingsPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Clear all data?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will delete all contacts, statuses, and tags. This action cannot be undone. Your settings and API keys will remain untouched.
+                            This will delete all contacts, statuses, tags, email accounts, templates, signatures, scheduled emails, and contact events. This action cannot be undone. Your app settings and API keys will remain untouched.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

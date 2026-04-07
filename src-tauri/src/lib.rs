@@ -1345,6 +1345,31 @@ async fn clear_all_data(db: tauri::State<'_, Db>) -> Result<(), AppError> {
     let pool = db.pool();
     let mut tx = pool.begin().await?;
 
+    // Delete dependents first, then parents
+    sqlx::query("DELETE FROM contact_events")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM contact_files")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM contact_tags")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_attachments")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_messages")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_threads")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM scheduled_emails")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_accounts")
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM contacts")
         .execute(&mut *tx)
         .await?;
@@ -1352,7 +1377,10 @@ async fn clear_all_data(db: tauri::State<'_, Db>) -> Result<(), AppError> {
         .execute(&mut *tx)
         .await?;
     sqlx::query("DELETE FROM tags").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM contact_tags")
+    sqlx::query("DELETE FROM email_templates")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_signatures")
         .execute(&mut *tx)
         .await?;
 
@@ -1403,17 +1431,186 @@ async fn export_all_data(db: tauri::State<'_, Db>) -> Result<String, AppError> {
     .fetch_all(pool)
     .await?;
 
+    // Contact events
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct ContactEventExport {
+        id: String,
+        contact_id: String,
+        title: String,
+        description: Option<String>,
+        event_at: chrono::DateTime<chrono::Utc>,
+        event_type: String,
+        created_at: chrono::DateTime<chrono::Utc>,
+    }
+    let contact_events = sqlx::query_as::<sqlx::Sqlite, ContactEventExport>(
+        "SELECT id, contact_id, title, description, event_at, event_type, created_at FROM contact_events",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Contact files (metadata only — actual files are on disk)
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct ContactFileExport {
+        id: String,
+        contact_id: String,
+        filename: String,
+        file_path: String,
+        created_at: chrono::DateTime<chrono::Utc>,
+    }
+    let contact_files = sqlx::query_as::<sqlx::Sqlite, ContactFileExport>(
+        "SELECT id, contact_id, filename, file_path, created_at FROM contact_files",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Email accounts (includes OAuth tokens — handle backup securely)
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct EmailAccountExport {
+        id: String,
+        email: String,
+        provider: String,
+        access_token: String,
+        refresh_token: String,
+        expires_at: Option<chrono::DateTime<chrono::Utc>>,
+        created_at: chrono::DateTime<chrono::Utc>,
+        updated_at: chrono::DateTime<chrono::Utc>,
+    }
+    let email_accounts = sqlx::query_as::<sqlx::Sqlite, EmailAccountExport>(
+        "SELECT id, email, provider, access_token, refresh_token, expires_at, created_at, updated_at FROM email_accounts",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Email threads
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct EmailThreadExport {
+        id: String,
+        account_id: String,
+        contact_id: Option<String>,
+        subject: String,
+        gmail_thread_id: Option<String>,
+        created_at: chrono::DateTime<chrono::Utc>,
+        updated_at: chrono::DateTime<chrono::Utc>,
+    }
+    let email_threads = sqlx::query_as::<sqlx::Sqlite, EmailThreadExport>(
+        "SELECT id, account_id, contact_id, subject, gmail_thread_id, created_at, updated_at FROM email_threads",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Email messages
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct EmailMessageExport {
+        id: String,
+        thread_id: String,
+        account_id: String,
+        contact_id: Option<String>,
+        from_email: String,
+        to_email: String,
+        subject: String,
+        body: String,
+        html_body: Option<String>,
+        status: String,
+        sent_at: Option<chrono::DateTime<chrono::Utc>>,
+        gmail_message_id: Option<String>,
+        created_at: chrono::DateTime<chrono::Utc>,
+    }
+    let email_messages = sqlx::query_as::<sqlx::Sqlite, EmailMessageExport>(
+        "SELECT id, thread_id, account_id, contact_id, from_email, to_email, subject, body, html_body, status, sent_at, gmail_message_id, created_at FROM email_messages",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Email attachments
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct EmailAttachmentExport {
+        id: String,
+        message_id: String,
+        filename: String,
+        content_type: String,
+        file_size: i64,
+        file_path: Option<String>,
+        created_at: chrono::DateTime<chrono::Utc>,
+    }
+    let email_attachments = sqlx::query_as::<sqlx::Sqlite, EmailAttachmentExport>(
+        "SELECT id, message_id, filename, content_type, file_size, file_path, created_at FROM email_attachments",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Scheduled emails
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct ScheduledEmailExport {
+        id: String,
+        account_id: String,
+        contact_id: String,
+        subject: String,
+        body: String,
+        scheduled_at: chrono::DateTime<chrono::Utc>,
+        status: String,
+        error_message: Option<String>,
+        attachment_paths: String,
+        created_at: chrono::DateTime<chrono::Utc>,
+        updated_at: chrono::DateTime<chrono::Utc>,
+    }
+    let scheduled_emails = sqlx::query_as::<sqlx::Sqlite, ScheduledEmailExport>(
+        "SELECT id, account_id, contact_id, subject, body, scheduled_at, status, error_message, attachment_paths, created_at, updated_at FROM scheduled_emails",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Email templates
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct EmailTemplateExport {
+        id: String,
+        name: String,
+        subject: String,
+        body: String,
+        attachment_paths: String,
+        created_at: chrono::DateTime<chrono::Utc>,
+        updated_at: chrono::DateTime<chrono::Utc>,
+    }
+    let email_templates = sqlx::query_as::<sqlx::Sqlite, EmailTemplateExport>(
+        "SELECT id, name, subject, body, attachment_paths, created_at, updated_at FROM email_templates",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    // Email signatures
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct EmailSignatureExport {
+        id: String,
+        name: String,
+        content: String,
+        created_at: chrono::DateTime<chrono::Utc>,
+        updated_at: chrono::DateTime<chrono::Utc>,
+    }
+    let email_signatures = sqlx::query_as::<sqlx::Sqlite, EmailSignatureExport>(
+        "SELECT id, name, content, created_at, updated_at FROM email_signatures",
+    )
+    .fetch_all(pool)
+    .await?;
+
     let settings_map = jobdex_core::settings::SettingsManager::new(pool.clone())
         .get_all()
         .await?;
 
     let export = serde_json::json!({
-        "version": "1.1",
+        "version": "1.2",
         "exported_at": chrono::Utc::now().to_rfc3339(),
         "contacts": contacts,
         "statuses": statuses,
         "tags": tags,
         "contact_tags": contact_tags,
+        "contact_events": contact_events,
+        "contact_files": contact_files,
+        "email_accounts": email_accounts,
+        "email_threads": email_threads,
+        "email_messages": email_messages,
+        "email_attachments": email_attachments,
+        "scheduled_emails": scheduled_emails,
+        "email_templates": email_templates,
+        "email_signatures": email_signatures,
         "settings": settings_map
     });
 
@@ -1434,12 +1631,15 @@ async fn export_all_data_to_path(
 }
 
 #[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
 struct ImportSummary {
     contacts_added: i32,
     contacts_updated: i32,
     statuses_added: i32,
     tags_added: i32,
+    events_restored: i32,
+    templates_restored: i32,
+    signatures_restored: i32,
+    scheduled_restored: i32,
 }
 
 #[tauri::command]
@@ -1458,9 +1658,9 @@ async fn import_all_data(
     let json: serde_json::Value = serde_json::from_str(&raw)?;
 
     let version = json["version"].as_str().unwrap_or("");
-    if version != "1.0" && version != "1.1" {
+    if version != "1.0" && version != "1.1" && version != "1.2" {
         return Err(AppError::Validation(format!(
-            "Unsupported backup version: \"{}\". Only versions 1.0 and 1.1 are supported.",
+            "Unsupported backup version: \"{}\". Only versions 1.0, 1.1, and 1.2 are supported.",
             version
         )));
     }
@@ -1472,6 +1672,10 @@ async fn import_all_data(
     let mut contacts_updated: i32 = 0;
     let mut statuses_added: i32 = 0;
     let mut tags_added: i32 = 0;
+    let mut events_restored: i32 = 0;
+    let mut templates_restored: i32 = 0;
+    let mut signatures_restored: i32 = 0;
+    let mut scheduled_restored: i32 = 0;
 
     // --- Statuses ---
     if let Some(statuses) = json["statuses"].as_array() {
@@ -1683,6 +1887,146 @@ async fn import_all_data(
         }
     }
 
+    // --- Contact events (v1.2+) ---
+    if let Some(events) = json["contact_events"].as_array() {
+        for ev in events {
+            let id = ev["id"].as_str().unwrap_or("").to_string();
+            let contact_id = ev["contact_id"].as_str().unwrap_or("").to_string();
+            let title = ev["title"].as_str().unwrap_or("").to_string();
+            if id.is_empty() || contact_id.is_empty() {
+                continue;
+            }
+            let description = ev["description"].as_str().map(|s| s.to_string());
+            let event_at = ev["event_at"].as_str().unwrap_or("").to_string();
+            let event_type = ev["event_type"].as_str().unwrap_or("activity").to_string();
+            let created_at = ev["created_at"].as_str().unwrap_or("").to_string();
+
+            let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM contact_events WHERE id = ?")
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await?;
+
+            if !exists {
+                sqlx::query(
+                    "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                )
+                .bind(&id)
+                .bind(&contact_id)
+                .bind(&title)
+                .bind(&description)
+                .bind(&event_at)
+                .bind(&event_type)
+                .bind(&created_at)
+                .execute(&mut *tx)
+                .await?;
+                events_restored += 1;
+            }
+        }
+    }
+
+    // --- Email templates (v1.2+) ---
+    if let Some(templates) = json["email_templates"].as_array() {
+        for t in templates {
+            let id = t["id"].as_str().unwrap_or("").to_string();
+            let name = t["name"].as_str().unwrap_or("").to_string();
+            if id.is_empty() || name.is_empty() {
+                continue;
+            }
+            let subject = t["subject"].as_str().unwrap_or("").to_string();
+            let body = t["body"].as_str().unwrap_or("").to_string();
+            let attachment_paths = t["attachment_paths"].as_str().unwrap_or("[]").to_string();
+
+            let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM email_templates WHERE id = ?")
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await?;
+
+            if !exists {
+                sqlx::query(
+                    "INSERT INTO email_templates (id, name, subject, body, attachment_paths) VALUES (?, ?, ?, ?, ?)",
+                )
+                .bind(&id)
+                .bind(&name)
+                .bind(&subject)
+                .bind(&body)
+                .bind(&attachment_paths)
+                .execute(&mut *tx)
+                .await?;
+                templates_restored += 1;
+            }
+        }
+    }
+
+    // --- Email signatures (v1.2+) ---
+    if let Some(signatures) = json["email_signatures"].as_array() {
+        for s in signatures {
+            let id = s["id"].as_str().unwrap_or("").to_string();
+            let name = s["name"].as_str().unwrap_or("").to_string();
+            if id.is_empty() || name.is_empty() {
+                continue;
+            }
+            let content = s["content"].as_str().unwrap_or("").to_string();
+
+            let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM email_signatures WHERE id = ?")
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await?;
+
+            if !exists {
+                sqlx::query(
+                    "INSERT INTO email_signatures (id, name, content) VALUES (?, ?, ?)",
+                )
+                .bind(&id)
+                .bind(&name)
+                .bind(&content)
+                .execute(&mut *tx)
+                .await?;
+                signatures_restored += 1;
+            }
+        }
+    }
+
+    // --- Scheduled emails (v1.2+) ---
+    if let Some(scheduled) = json["scheduled_emails"].as_array() {
+        for s in scheduled {
+            let id = s["id"].as_str().unwrap_or("").to_string();
+            let account_id = s["account_id"].as_str().unwrap_or("").to_string();
+            let contact_id = s["contact_id"].as_str().unwrap_or("").to_string();
+            if id.is_empty() || account_id.is_empty() || contact_id.is_empty() {
+                continue;
+            }
+            let subject = s["subject"].as_str().unwrap_or("").to_string();
+            let body = s["body"].as_str().unwrap_or("").to_string();
+            let scheduled_at = s["scheduled_at"].as_str().unwrap_or("").to_string();
+            let status = s["status"].as_str().unwrap_or("pending").to_string();
+            let error_message = s["error_message"].as_str().map(|s| s.to_string());
+            let attachment_paths = s["attachment_paths"].as_str().unwrap_or("[]").to_string();
+
+            let exists: bool = sqlx::query_scalar("SELECT COUNT(*) > 0 FROM scheduled_emails WHERE id = ?")
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await?;
+
+            if !exists {
+                sqlx::query(
+                    "INSERT INTO scheduled_emails (id, account_id, contact_id, subject, body, scheduled_at, status, error_message, attachment_paths) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                )
+                .bind(&id)
+                .bind(&account_id)
+                .bind(&contact_id)
+                .bind(&subject)
+                .bind(&body)
+                .bind(&scheduled_at)
+                .bind(&status)
+                .bind(&error_message)
+                .bind(&attachment_paths)
+                .execute(&mut *tx)
+                .await?;
+                scheduled_restored += 1;
+            }
+        }
+    }
+
     tx.commit().await?;
 
     Ok(ImportSummary {
@@ -1690,6 +2034,10 @@ async fn import_all_data(
         contacts_updated,
         statuses_added,
         tags_added,
+        events_restored,
+        templates_restored,
+        signatures_restored,
+        scheduled_restored,
     })
 }
 
