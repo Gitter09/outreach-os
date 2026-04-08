@@ -20,15 +20,10 @@ const MS_SCOPES: &[&str] = &[
     "https://graph.microsoft.com/Mail.Read",
 ];
 
-// Centralized OAuth Defaults
-// To be replaced with actual Client ID/Secret from Azure Portal
+// Default Client ID baked in at compile time (optional build-time override)
 const DEFAULT_OUTLOOK_CLIENT_ID: &str = match option_env!("OUTLOOK_CLIENT_ID") {
     Some(id) => id,
     None => "PLACEHOLDER_OUTLOOK_CLIENT_ID",
-};
-const DEFAULT_OUTLOOK_CLIENT_SECRET: &str = match option_env!("OUTLOOK_CLIENT_SECRET") {
-    Some(secret) => secret,
-    None => "PLACEHOLDER_OUTLOOK_CLIENT_SECRET",
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -73,7 +68,7 @@ impl OutlookClient {
 
         let mut client_secret = crate::crypto::get_credential("outlook", "client_secret").ok();
         if let Some(ref sec) = client_secret {
-            if sec == "PLACEHOLDER_OUTLOOK_CLIENT_SECRET" || sec.trim().is_empty() {
+            if sec.trim().is_empty() {
                 client_secret = None;
             }
         }
