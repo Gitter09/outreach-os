@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coming Soon — JobDex</title>
+  <meta name="description"
+    content="JobDex is releasing soon. Get on the waitlist to be notified when the final release is ready.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" type="image/svg+xml" href="favicon-tab.svg">
+  <link rel="icon" type="image/svg+xml" sizes="512x512" href="favicon-tab.svg">
+  <link rel="apple-touch-icon" href="favicon-tab.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Scope specific styles to this page for the countdown since it's a unique element */
+    .countdown-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 48px auto;
+      text-align: center;
+    }
+
+    .countdown-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px 20px;
+      min-width: 80px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .countdown-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .countdown-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-3);
+      font-weight: 500;
+    }
+
+    .notify-form {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      max-width: 400px;
+      margin: 0 auto;
+      margin-top: 16px;
+    }
+
+    .notify-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .notify-input:focus {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .notify-input::placeholder {
+      color: var(--text-3);
+    }
+
+    @media (max-width: 480px) {
+      .countdown-container {
+        gap: 12px;
+      }
+
+      .countdown-box {
+        padding: 12px 14px;
+        min-width: 60px;
+      }
+
+      .countdown-value {
+        font-size: 24px;
+      }
+
+      .notify-form {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body data-theme="dark">
+  <!-- ══════════════════════════════════════════
+     SITE HEADER & NAV
+══════════════════════════════════════════ -->
+  <header class="site-header" id="site-header">
+    <nav class="navbar" aria-label="Main Navigation">
+      <div class="navbar__toggle-wrapper">
+        <button class="navbar__toggle" id="navbar-toggle" aria-label="Open menu" aria-expanded="false"
+          aria-controls="mobile-nav">
+          <span class="toggle-line top"></span>
+          <span class="toggle-line middle"></span>
+          <span class="toggle-line bottom"></span>
+        </button>
+      </div>
+
+      <a href="index.html" class="navbar__brand" aria-label="JobDex Home">
+        <div class="navbar__logo">
+          <svg width="22" height="22" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true">
+            <path
+              d="M300 120C344.057 120 384.415 135.83 415.702 162.11L353.568 236.159C339.829 219.991 320.9 210 300 210C258.026 210 224 250.294 224 300C224 349.706 258.026 390 300 390C341.974 390 376 349.706 376 300C376 283.896 372.427 268.78 366.17 255.702L449.59 199.857C468.794 228.488 480 262.935 480 300C480 399.411 399.411 480 300 480C200.589 480 120 399.411 120 300C120 200.589 200.589 120 300 120Z"
+              fill="#000000" />
+            <path
+              d="M456.124 46.0815C483.732 58.1553 507.867 76.9668 526.317 100.791C544.766 124.615 556.939 152.69 561.72 182.441L530.264 187.496C526.329 163.011 516.31 139.905 501.127 120.298C485.943 100.691 466.08 85.2088 443.358 75.2721L456.124 46.0815Z"
+              fill="#000000" />
+            <path
+              d="M430.086 102.473C449.258 110.858 466.019 123.921 478.831 140.466C491.643 157.011 500.097 176.507 503.417 197.167L476.36 201.515C473.768 185.384 467.168 170.162 457.164 157.244C447.161 144.327 434.075 134.127 419.106 127.581L430.086 102.473Z"
+              fill="#000000" />
+          </svg>
+        </div>
+        <span class="navbar__title">JobDex</span>
+      </a>
+
+      <nav class="navbar__nav" aria-label="Desktop Navigation">
+        <ul class="navbar__nav-links">
+          <li><a href="index.html#features" class="nav-link">Features</a></li>
+          <li><a href="coming-soon.html" class="nav-link" aria-current="page">Downloads</a></li>
+          <li><a href="https://docs.jobdex.tech" target="_parent" rel="noopener noreferrer" class="nav-link">Docs</a>
+          </li>
+          <li><a href="https://github.com/Gitter09/jobdex/wiki" target="_blank" rel="noopener noreferrer"
+              class="nav-link">Developers</a></li>
+          <li><a href="contact.html" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <div class="navbar__actions">
+        <a href="coming-soon.html" class="btn btn-primary navbar__cta" data-download="cta"
+          data-original-href="https://github.com/Gitter09/jobdex/releases" data-original-text="Download">Get
+          Notified</a>
+      </div>
+
+    </nav>
+  </header>
+
+  <!-- Mobile Navigation Overlay -->
+  <div id="mobile-nav" class="mobile-nav" aria-hidden="true" inert>
+    <ul class="mobile-nav__links">
+      <li><a href="index.html#features" class="mobile-nav__link">Features</a></li>
+      <li><a href="coming-soon.html" class="mobile-nav__link">Downloads</a></li>
+      <li><a href="https://docs.jobdex.tech" target="_parent" rel="noopener noreferrer"
+          class="mobile-nav__link">Docs</a></li>
+      <li><a href="https://github.com/Gitter09/jobdex/wiki" target="_blank" rel="noopener noreferrer"
+          class="mobile-nav__link">Developers</a></li>
+      <li><a href="https://github.com/Gitter09/jobdex" target="_blank" rel="noopener noreferrer"
+          class="mobile-nav__link">GitHub</a></li>
+      <li><a href="contact.html" class="mobile-nav__link">Contact</a></li>
+    </ul>
+    <div class="mobile-nav__footer">
+      <a href="coming-soon.html" class="btn btn-primary btn-lg mobile-nav__cta" data-download="cta"
+        data-original-href="https://github.com/Gitter09/jobdex/releases"
+        data-original-text="&darr;&nbsp;&nbsp;Download Free">
+        &darr;&nbsp;&nbsp;Get Notified
+      </a>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+  <section id="dl-hero" style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+    <div class="dl-hero-inner" style="margin-top: -60px;">
+      <h1 class="sr-only">Coming Soon — JobDex</h1>
+      <p class="s-label reveal">Teaser Release</p>
+      <h2 class="reveal d1">I'm refining the final release.</h2>
+      <p class="dl-hero-sub reveal d2" style="max-width: 580px; margin: 0 auto;">JobDex is nearly ready. I'm taking a
+        few extra days to squash bugs and polish the experience. Check back when the clock hits zero.</p>
+
+      <!-- Countdown Timer -->
+      <div class="countdown-container reveal d3" id="launch-countdown">
+        <div class="countdown-box">
+          <div class="countdown-value" id="cd-days">--</div>
+          <div class="countdown-label">Days</div>
+        </div>
+        <div class="countdown-box">
+          <div class="countdown-value" id="cd-hours">--</div>
+          <div class="countdown-label">Hours</div>
+        </div>
+        <div class="countdown-box">
+          <div class="countdown-value" id="cd-minutes">--</div>
+          <div class="countdown-label">Minutes</div>
+        </div>
+        <div class="countdown-box">
+          <div class="countdown-value" id="cd-seconds">--</div>
+          <div class="countdown-label">Seconds</div>
+        </div>
+      </div>
+
+      <div class="reveal d4">
+        <form action="mailto:hello@jobdex.tech" method="GET" enctype="text/plain" id="notify-form" class="notify-form">
+          <input type="email" name="email" placeholder="Your best email" required aria-label="Email address"
+            class="notify-input">
+          <input type="hidden" name="subject" value="JobDex Waitlist Request">
+          <button type="submit" class="btn btn-primary">Get Notified</button>
+        </form>
+        <p style="margin-top: 14px; font-size: 11px; color: var(--text-3); text-align: center;">No spam, ever. Your data
+          stays yours.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <div class="footer-logo">
+            <div class="footer-logo-mark">
+              <svg width="17" height="17" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true">
+                <path
+                  d="M300 120C344.057 120 384.415 135.83 415.702 162.11L353.568 236.159C339.829 219.991 320.9 210 300 210C258.026 210 224 250.294 224 300C224 349.706 258.026 390 300 390C341.974 390 376 349.706 376 300C376 283.896 372.427 268.78 366.17 255.702L449.59 199.857C468.794 228.488 480 262.935 480 300C480 399.411 399.411 480 300 480C200.589 480 120 399.411 120 300C120 200.589 200.589 120 300 120Z"
+                  fill="#000000" />
+                <path
+                  d="M456.124 46.0815C483.732 58.1553 507.867 76.9668 526.317 100.791C544.766 124.615 556.939 152.69 561.72 182.441L530.264 187.496C526.329 163.011 516.31 139.905 501.127 120.298C485.943 100.691 466.08 85.2088 443.358 75.2721L456.124 46.0815Z"
+                  fill="#000000" />
+                <path
+                  d="M430.086 102.473C449.258 110.858 466.019 123.921 478.831 140.466C491.643 157.011 500.097 176.507 503.417 197.167L476.36 201.515C473.768 185.384 467.168 170.162 457.164 157.244C447.161 144.327 434.075 134.127 419.106 127.581L430.086 102.473Z"
+                  fill="#000000" />
+              </svg>
+            </div>
+            <span class="footer-logo-name">JobDex</span>
+          </div>
+          <p class="footer-copy">Built by Harshit Singh · &copy; 2026 JobDex · Source-available · MIT + Commons Clause
+          </p>
+        </div>
+        <nav class="footer-links">
+          <a href="index.html#features">Features</a>
+          <a href="https://docs.jobdex.tech" target="_parent">Docs</a>
+          <a href="https://github.com/Gitter09/jobdex" target="_blank">GitHub</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+
+</html>

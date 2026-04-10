@@ -387,6 +387,52 @@
   })();
 
 
+  /* ── TEASER / COUNTDOWN LOGIC ── */
+  (function () {
+    const TARGET_DATE = new Date('2026-04-15T11:00:00+05:30').getTime();
+
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const distance = TARGET_DATE - now;
+
+      if (distance <= 0) {
+        window.JOBDEX_TEASER_ACTIVE = false;
+        const countdownContainer = document.getElementById('launch-countdown');
+        if (countdownContainer) {
+          countdownContainer.innerHTML = '<div style="font-size: 24px; font-weight: 600;">JobDex is now available!</div>';
+          setTimeout(() => { window.location.href = 'download.html'; }, 2000);
+        }
+        return false;
+      }
+
+      window.JOBDEX_TEASER_ACTIVE = true;
+      const elDays = document.getElementById('cd-days');
+      if (elDays) {
+        document.getElementById('cd-days').textContent = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+        document.getElementById('cd-hours').textContent = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+        document.getElementById('cd-minutes').textContent = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        document.getElementById('cd-seconds').textContent = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+      }
+      return true;
+    }
+
+    if (updateCountdown()) {
+      setInterval(updateCountdown, 1000);
+    } else {
+      // Past release date: override hardcoded "Get Notified" in HTML back to downlods
+      const buttons = document.querySelectorAll('[data-download="cta"]');
+      buttons.forEach(btn => {
+        if (btn.dataset.fallbackHref) btn.href = btn.dataset.fallbackHref;
+        if (btn.dataset.fallbackText) btn.innerHTML = btn.dataset.fallbackText;
+      });
+      const allDls = document.querySelector('.hero-all-downloads');
+      if (allDls && allDls.dataset.fallbackHref) {
+        allDls.href = allDls.dataset.fallbackHref;
+      }
+    }
+  })();
+
+
   /* ── OS-AWARE DOWNLOAD BUTTONS ── */
   (function () {
     const GITHUB_API = 'https://api.github.com/repos/Gitter09/jobdex/releases/latest';
@@ -453,6 +499,8 @@
     }
 
     function enhanceButtons(os, asset) {
+      if (window.JOBDEX_TEASER_ACTIVE) return;
+
       const label = osLabel(os);
       if (!label || !asset) return;
 
