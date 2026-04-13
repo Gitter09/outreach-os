@@ -18,6 +18,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useErrors } from "@/hooks/use-errors";
 
@@ -55,28 +59,32 @@ interface ColumnMapping {
     title: number | null;
     location: number | null;
     company_website: number | null;
+    intelligence_summary: number[];
 }
+
+const EMPTY_MAPPING: ColumnMapping = {
+    first_name: null,
+    last_name: null,
+    email: null,
+    linkedin_url: null,
+    company: null,
+    title: null,
+    location: null,
+    company_website: null,
+    intelligence_summary: [],
+};
 
 export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDialogProps) {
     const { handleError } = useErrors();
     const [filePath, setFilePath] = useState<string | null>(null);
     const [preview, setPreview] = useState<ImportPreview | null>(null);
     const [loading, setLoading] = useState(false);
-    const [importing, setImporting] = useState(false); // Used for both import & analysis loading states if needed, but we have specific ones.
+    const [importing, setImporting] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
-    const [mapping, setMapping] = useState<ColumnMapping>({
-        first_name: null,
-        last_name: null,
-        email: null,
-        linkedin_url: null,
-        company: null,
-        title: null,
-        location: null,
-        company_website: null,
-    });
+    const [mapping, setMapping] = useState<ColumnMapping>(EMPTY_MAPPING);
 
     const handleSelectFile = async () => {
         const selected = await openFileDialog({
@@ -96,7 +104,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                 setPreview(result);
 
                 // Auto-detect column mappings
-                const autoMapping = { ...mapping };
+                const autoMapping: ColumnMapping = { ...EMPTY_MAPPING };
                 result.headers.forEach((header, index) => {
                     const lower = header.toLowerCase();
                     if (lower.includes("first") && lower.includes("name")) {
@@ -104,7 +112,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                     } else if (lower.includes("last") && lower.includes("name")) {
                         autoMapping.last_name = index;
                     } else if (lower === "name" || lower === "full name") {
-                        autoMapping.first_name = index; // Use as first name if no split
+                        autoMapping.first_name = index;
                     } else if (lower.includes("email") || lower.includes("e-mail")) {
                         autoMapping.email = index;
                     } else if (lower.includes("linkedin")) {
@@ -117,6 +125,13 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                         autoMapping.location = index;
                     } else if (lower.includes("website") || lower === "url" || lower.includes("company url")) {
                         autoMapping.company_website = index;
+                    } else if (
+                        lower.includes("summary") || lower.includes("intelligence") ||
+                        lower.includes("notes") || lower === "note" ||
+                        lower.includes("signal") || lower.includes("insights") ||
+                        lower.includes("bio") || lower.includes("background")
+                    ) {
+                        autoMapping.intelligence_summary = [...autoMapping.intelligence_summary, index];
                     }
                 });
                 setMapping(autoMapping);
@@ -167,24 +182,27 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
         setFilePath(null);
         setPreview(null);
         setAnalysis(null);
-        setMapping({
-            first_name: null,
-            last_name: null,
-            email: null,
-            linkedin_url: null,
-            company: null,
-            title: null,
-            location: null,
-            company_website: null,
-        });
+        setMapping(EMPTY_MAPPING);
         setImportResult(null);
         onOpenChange(false);
     };
 
-    const updateMapping = (field: keyof ColumnMapping, value: string) => {
+    const updateMapping = (
+        field: Exclude<keyof ColumnMapping, "intelligence_summary">,
+        value: string
+    ) => {
         setMapping(prev => ({
             ...prev,
             [field]: value === "none" ? null : parseInt(value, 10),
+        }));
+    };
+
+    const toggleSummaryColumn = (index: number) => {
+        setMapping(prev => ({
+            ...prev,
+            intelligence_summary: prev.intelligence_summary.includes(index)
+                ? prev.intelligence_summary.filter(i => i !== index)
+                : [...prev.intelligence_summary, index],
         }));
     };
 
@@ -333,6 +351,61 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Intelligence Summary — multi-column select */}
+                            <div className="space-y-1">
+                                <Label className="text-xs uppercase text-muted-foreground">
+                                    Intelligence Summary
+                                    <span className="ml-1 normal-case text-muted-foreground/60 font-normal">
+                                        (select one or more columns — joined with blank line)
+                                    </span>
+                                </Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className="w-full justify-start font-normal h-auto min-h-9 flex-wrap gap-1"
+                                        >
+                                            {mapping.intelligence_summary.length === 0 ? (
+                                                <span className="text-muted-foreground">— Not mapped —</span>
+                                            ) : (
+                                                mapping.intelligence_summary.map(idx => (
+                                                    <Badge key={idx} variant="secondary" className="text-xs">
+                                                        {preview.headers[idx]}
+                                                    </Badge>
+                                                ))
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                        <ScrollArea className="max-h-56">
+                                            <div className="p-1">
+                                                {mapping.intelligence_summary.length > 0 && (
+                                                    <button
+                                                        className="w-full text-xs text-left px-2 py-1.5 text-muted-foreground hover:text-foreground"
+                                                        onClick={() => setMapping(prev => ({ ...prev, intelligence_summary: [] }))}
+                                                    >
+                                                        Clear all
+                                                    </button>
+                                                )}
+                                                {preview.headers.map((header, idx) => (
+                                                    <label
+                                                        key={idx}
+                                                        className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted/50 text-sm"
+                                                    >
+                                                        <Checkbox
+                                                            checked={mapping.intelligence_summary.includes(idx)}
+                                                            onCheckedChange={() => toggleSummaryColumn(idx)}
+                                                        />
+                                                        <span>{header}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                         </div>
 
                     </div>
@@ -390,6 +463,6 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
                     </DialogFooter>
                 )}
             </DialogContent>
-        </Dialog >
+        </Dialog>
     );
 }

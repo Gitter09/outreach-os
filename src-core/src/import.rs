@@ -19,6 +19,8 @@ pub struct ColumnMapping {
     pub title: Option<usize>,
     pub location: Option<usize>,
     pub company_website: Option<usize>,
+    #[serde(default)]
+    pub intelligence_summary: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +33,7 @@ pub struct ImportedContact {
     pub title: Option<String>,
     pub location: Option<String>,
     pub company_website: Option<String>,
+    pub intelligence_summary: Option<String>,
 }
 
 /// Reads a file and returns a preview (headers + sample rows)
@@ -218,6 +221,20 @@ pub fn parse_file_with_mapping(
                     .and_then(|i| row.get(i))
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty()),
+                intelligence_summary: {
+                    let parts: Vec<String> = mapping
+                        .intelligence_summary
+                        .iter()
+                        .filter_map(|&i| row.get(i))
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    if parts.is_empty() {
+                        None
+                    } else {
+                        Some(parts.join("\n\n"))
+                    }
+                },
             })
         })
         .collect();

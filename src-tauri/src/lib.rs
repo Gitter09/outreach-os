@@ -2266,7 +2266,8 @@ async fn import_contacts(
                         company = COALESCE(company, NULLIF(?, '')),
                         title = COALESCE(title, NULLIF(?, '')),
                         location = COALESCE(location, NULLIF(?, '')),
-                        company_website = COALESCE(company_website, NULLIF(?, ''))
+                        company_website = COALESCE(company_website, NULLIF(?, '')),
+                        intelligence_summary = COALESCE(intelligence_summary, NULLIF(?, ''))
                     WHERE id = ?
                     "#,
                 )
@@ -2276,6 +2277,7 @@ async fn import_contacts(
                 .bind(&contact.title)
                 .bind(&contact.location)
                 .bind(&contact.company_website)
+                .bind(&contact.intelligence_summary)
                 .bind(&id)
                 .execute(pool)
                 .await;
@@ -2307,7 +2309,7 @@ async fn import_contacts(
             };
 
             let result = sqlx::query(
-                "INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, company, title, location, company_website, status, status_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, company, title, location, company_website, intelligence_summary, status, status_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
                 .bind(&id)
                 .bind(&contact.first_name)
@@ -2318,6 +2320,7 @@ async fn import_contacts(
                 .bind(&contact.title)
                 .bind(&contact.location)
                 .bind(&contact.company_website)
+                .bind(&contact.intelligence_summary)
                 .bind(&status_label)
                 .bind(&status_id)
                 .execute(pool)

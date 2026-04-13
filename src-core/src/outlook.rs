@@ -337,32 +337,52 @@ impl OutlookClient {
         let select = "id,from,toRecipients,subject,body,receivedDateTime,sentDateTime,isDraft";
         let mut all_messages = Vec::new();
 
+        // Build a set for fast client-side contact matching (covers toRecipients)
+        let contact_set: std::collections::HashSet<String> =
+            contact_emails.iter().map(|e| e.to_lowercase()).collect();
+
         // Partition contact emails to avoid hitting URL length limits
-        let chunks = contact_emails.chunks(10); // Outlook filters can get complex, keep chunks small
+        let chunks = contact_emails.chunks(10);
 
         for chunk in chunks {
+            // inbox: filter by from address (Graph supports this)
             let mut or_parts = Vec::new();
             for email in chunk {
-                // Filter for both sent and received involving this contact
-                or_parts.push(format!("(from/emailAddress/address eq '{}' or toRecipients/any(a:a/emailAddress/address eq '{}'))", email, email));
+                or_parts.push(format!("from/emailAddress/address eq '{}'", email));
             }
-
             let contacts_filter = format!("({})", or_parts.join(" or "));
-            let final_filter = if base_filter.is_empty() {
+
+            let inbox_filter = if base_filter.is_empty() {
                 contacts_filter
             } else {
                 format!("{} and {}", base_filter, contacts_filter)
             };
 
+            // sentItems: Graph rejects toRecipients/any() — use timestamp only, filter contacts client-side
+            let sent_filter = base_filter.clone();
+
             // Fetch from both inbox and sentItems folders
             for folder in &["inbox", "sentItems"] {
-                let url = format!(
-                    "https://graph.microsoft.com/v1.0/me/mailFolders/{}/messages?$filter={}&$top={}&$select={}",
-                    folder,
-                    urlencoding::encode(&final_filter),
-                    max_results,
-                    select
-                );
+                let active_filter = if *folder == "inbox" {
+                    inbox_filter.clone()
+                } else {
+                    sent_filter.clone()
+                };
+
+                let url = if active_filter.is_empty() {
+                    format!(
+                        "https://graph.microsoft.com/v1.0/me/mailFolders/{}/messages?$top={}&$select={}",
+                        folder, max_results, select
+                    )
+                } else {
+                    format!(
+                        "https://graph.microsoft.com/v1.0/me/mailFolders/{}/messages?$filter={}&$top={}&$select={}",
+                        folder,
+                        urlencoding::encode(&active_filter),
+                        max_results,
+                        select
+                    )
+                };
 
                 let response = self
                     .http_client
@@ -395,12 +415,24 @@ impl OutlookClient {
                             .unwrap_or("")
                             .to_string();
 
-                        let to_email = item["toRecipients"]
+                        let all_to_emails: Vec<String> = item["toRecipients"]
                             .as_array()
-                            .and_then(|arr| arr.first())
-                            .and_then(|r| r["emailAddress"]["address"].as_str())
-                            .unwrap_or("")
-                            .to_string();
+                            .map(|arr| {
+                                arr.iter()
+                                    .filter_map(|r| r["emailAddress"]["address"].as_str())
+                                    .map(|s| s.to_lowercase())
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+
+                        // Client-side contact filter — catches toRecipients for sentItems
+                        let matches_contact = contact_set.contains(&from_email.to_lowercase())
+                            || all_to_emails.iter().any(|e| contact_set.contains(e));
+                        if !matches_contact {
+                            continue;
+                        }
+
+                        let to_email = all_to_emails.into_iter().next().unwrap_or_default();
 
                         let subject = item["subject"].as_str().unwrap_or("").to_string();
                         let body = item["body"]["content"].as_str().unwrap_or("").to_string();
