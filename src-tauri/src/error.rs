@@ -3,27 +3,21 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AppError {
-    #[allow(dead_code)]
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
-    #[allow(dead_code)]
     #[error("Network error: {0}")]
     Network(String),
 
-    #[allow(dead_code)]
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[allow(dead_code)]
     #[error("Validation error: {0}")]
     Validation(String),
 
-    #[allow(dead_code)]
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
-    #[allow(dead_code)]
     #[error("Internal error: {0}")]
     Internal(String),
 }

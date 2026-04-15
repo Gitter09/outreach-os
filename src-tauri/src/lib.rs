@@ -9,7 +9,57 @@ mod scheduler;
 mod tray;
 mod utils;
 
-pub fn extract_linkedin_slug(url: &str) -> Option<&str> {
+/// Shared SELECT base for fetching contacts with status JOIN and effective_next_date.
+/// Append `WHERE c.id = ?` or `ORDER BY ...` to complete the query.
+const CONTACT_SELECT_BASE: &str = r#"
+    SELECT
+        c.*,
+        s.label AS status_label,
+        s.color AS status_color,
+        (
+            SELECT MIN(d)
+            FROM (
+                SELECT c.next_contact_date AS d WHERE c.next_contact_date IS NOT NULL
+                UNION ALL
+                SELECT MIN(event_at) AS d
+                FROM contact_events
+                WHERE contact_id = c.id
+                  AND event_type = 'user_event'
+                  AND event_at >= CURRENT_TIMESTAMP
+            )
+        ) AS effective_next_date
+    FROM contacts c
+    LEFT JOIN statuses s ON c.status_id = s.id
+"#;
+
+/// Returns the ID of the first status by position, or an error if none exist.
+async fn fetch_default_status_id(pool: &sqlx::SqlitePool) -> Result<String, AppError> {
+    sqlx::query_scalar("SELECT id FROM statuses ORDER BY position ASC LIMIT 1")
+        .fetch_optional(pool)
+        .await?
+        .ok_or_else(|| {
+            AppError::Validation(
+                "No statuses found in database. Please create a status first.".to_string(),
+            )
+        })
+}
+
+/// Fire-and-forget activity event insert. Errors are intentionally ignored — the
+/// primary operation already succeeded by the time this is called.
+async fn log_activity_event(pool: &sqlx::SqlitePool, contact_id: &str, title: &str) {
+    let event_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
+    )
+    .bind(&event_id)
+    .bind(contact_id)
+    .bind(title)
+    .bind(Option::<String>::None)
+    .execute(pool)
+    .await;
+}
+
+fn extract_linkedin_slug(url: &str) -> Option<&str> {
     // Match /in/username or /pub/username patterns
     url.split("/in/")
         .nth(1)
@@ -18,11 +68,6 @@ pub fn extract_linkedin_slug(url: &str) -> Option<&str> {
         .map(|s| s.split('?').next().unwrap_or(s))
 }
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[derive(serde::Serialize)]
 struct ContactWithTags {
@@ -36,32 +81,10 @@ async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, 
     let pool = db.pool();
 
     // 1. Fetch Contacts
-    let contacts = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(
-        r#"
-        SELECT 
-            c.*, 
-            s.label as status_label, 
-            s.color as status_color,
-            (
-                SELECT MIN(d)
-                FROM (
-                    SELECT c.next_contact_date AS d WHERE c.next_contact_date IS NOT NULL
-                    UNION ALL
-                    SELECT MIN(event_at) AS d 
-                    FROM contact_events 
-                    WHERE contact_id = c.id 
-                      AND event_type = 'user_event' 
-                      AND event_at >= CURRENT_TIMESTAMP
-                )
-            ) as effective_next_date
-        FROM contacts c 
-        LEFT JOIN statuses s ON c.status_id = s.id
-        ORDER BY c.updated_at DESC
-        "#,
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|e: sqlx::Error| e.to_string())?;
+    let sql = format!("{} ORDER BY c.updated_at DESC", CONTACT_SELECT_BASE);
+    let contacts = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(&sql)
+        .fetch_all(pool)
+        .await?;
 
     // 2. Fetch All Tag Assignments
     // We fetch (contact_id, tag_id, tag_name, tag_color)
@@ -83,7 +106,7 @@ async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, 
     )
     .fetch_all(pool)
     .await
-    .map_err(|e: sqlx::Error| e.to_string())?;
+    ?;
 
     // 3. Group Tags by Contact ID
     use std::collections::HashMap;
@@ -120,34 +143,12 @@ async fn get_contact_by_id(
 ) -> Result<ContactWithTags, AppError> {
     let pool = db.pool();
 
-    let contact = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(
-        r#"
-        SELECT 
-            c.*, 
-            s.label as status_label, 
-            s.color as status_color,
-            (
-                SELECT MIN(d)
-                FROM (
-                    SELECT c.next_contact_date AS d WHERE c.next_contact_date IS NOT NULL
-                    UNION ALL
-                    SELECT MIN(event_at) AS d 
-                    FROM contact_events 
-                    WHERE contact_id = c.id 
-                      AND event_type = 'user_event' 
-                      AND event_at >= CURRENT_TIMESTAMP
-                )
-            ) as effective_next_date
-        FROM contacts c 
-        LEFT JOIN statuses s ON c.status_id = s.id
-        WHERE c.id = ?
-        "#,
-    )
-    .bind(&id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e: sqlx::Error| e.to_string())?
-    .ok_or_else(|| AppError::Validation(format!("Contact '{}' not found", id)))?;
+    let sql = format!("{} WHERE c.id = ?", CONTACT_SELECT_BASE);
+    let contact = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(&sql)
+        .bind(&id)
+        .fetch_optional(pool)
+        .await?
+        .ok_or_else(|| AppError::Validation(format!("Contact '{}' not found", id)))?;
 
     let tags = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Tag>(
         r#"
@@ -160,7 +161,7 @@ async fn get_contact_by_id(
     .bind(&id)
     .fetch_all(pool)
     .await
-    .map_err(|e: sqlx::Error| e.to_string())?;
+    ?;
 
     Ok(ContactWithTags { contact, tags })
 }
@@ -175,7 +176,7 @@ async fn get_statuses(
     )
     .fetch_all(pool)
     .await
-    .map_err(|e: sqlx::Error| e.to_string())?;
+    ?;
     Ok(statuses)
 }
 
@@ -187,7 +188,6 @@ async fn create_status(
 ) -> Result<String, AppError> {
     let pool = db.pool();
     let id = uuid::Uuid::new_v4().to_string();
-    // automated position at end
     sqlx::query("INSERT INTO statuses (id, label, color, position) VALUES (?, ?, ?, (SELECT COUNT(*) FROM statuses))")
         .bind(&id)
         .bind(label)
@@ -283,53 +283,32 @@ async fn add_contact(db: tauri::State<'_, Db>, args: AddContactArgs) -> Result<S
 
     // Resolve the final status_id — use provided value, or look up the
     // default status from the DB so we never hardcode a specific ID.
-    let (final_status_id, final_status_label) = if let Some(sid) = provided_status_id {
-        // Verify the provided status_id actually exists to give a cleaner error
-        let exists: Option<(String, String)> =
-            sqlx::query_as("SELECT id, label FROM statuses WHERE id = ?")
-                .bind(&sid)
-                .fetch_optional(pool)
-                .await
-                .map_err(|e: sqlx::Error| e.to_string())?;
-
-        match exists {
-            Some((id, label)) => (id, label),
-            None => return Err(format!("Status '{}' does not exist.", sid).into()),
+    let final_status_id = if let Some(sid) = provided_status_id {
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM statuses WHERE id = ?)")
+            .bind(&sid)
+            .fetch_one(pool)
+            .await?;
+        if !exists {
+            return Err(format!("Status '{}' does not exist.", sid).into());
         }
+        sid
     } else {
-        let default_status: Option<(String, String)> =
-            sqlx::query_as("SELECT id, label FROM statuses ORDER BY position ASC LIMIT 1")
-                .fetch_optional(pool)
-                .await
-                .map_err(|e: sqlx::Error| e.to_string())?;
-
-        match default_status {
-            Some((id, label)) => (id, label),
-            None => {
-                return Err(
-                    "No statuses found in database. Please create a status first."
-                        .to_string()
-                        .into(),
-                )
-            }
-        }
+        fetch_default_status_id(pool).await?
     };
 
-    sqlx::query("INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, status, status_id, title, company, location, company_website) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, status_id, title, company, location, company_website) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(&id)
         .bind(args.first_name)
         .bind(args.last_name)
         .bind(args.email)
         .bind(args.linkedin_url)
-        .bind(&final_status_label) // Legacy status field
         .bind(&final_status_id)
         .bind(args.title)
         .bind(args.company)
         .bind(args.location)
         .bind(args.company_website)
         .execute(pool)
-        .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        .await?;
     Ok(id)
 }
 
@@ -341,7 +320,6 @@ pub struct UpdateContactArgs {
     pub last_name: Option<String>,
     pub email: Option<String>,
     pub linkedin_url: Option<String>,
-    pub status: Option<String>, // Legacy
     pub status_id: Option<String>,
     pub last_contacted_date: Option<chrono::DateTime<chrono::Utc>>,
     pub next_contact_date: Option<chrono::DateTime<chrono::Utc>>,
@@ -358,28 +336,13 @@ pub struct UpdateContactArgs {
 async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Result<(), AppError> {
     let pool = db.pool();
 
-    // If status_id is provided, look up the label to keep legacy 'status' field in sync
-    let mut resolved_status_label = args.status;
-    if let Some(ref sid) = args.status_id {
-        if let Some(label) =
-            sqlx::query_scalar::<_, String>("SELECT label FROM statuses WHERE id = ?")
-                .bind(sid)
-                .fetch_optional(pool)
-                .await
-                .map_err(|e: sqlx::Error| e.to_string())?
-        {
-            resolved_status_label = Some(label);
-        }
-    }
-
     sqlx::query(
         r#"
-        UPDATE contacts SET 
-            first_name = COALESCE(?, first_name), 
-            last_name = COALESCE(?, last_name), 
-            email = COALESCE(?, email), 
-            linkedin_url = COALESCE(?, linkedin_url), 
-            status = COALESCE(?, status),
+        UPDATE contacts SET
+            first_name = COALESCE(?, first_name),
+            last_name = COALESCE(?, last_name),
+            email = COALESCE(?, email),
+            linkedin_url = COALESCE(?, linkedin_url),
             status_id = COALESCE(?, status_id),
             last_contacted_date = COALESCE(?, last_contacted_date),
             next_contact_date = COALESCE(?, next_contact_date),
@@ -389,7 +352,7 @@ async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Re
             location = COALESCE(?, location),
             company_website = COALESCE(?, company_website),
             intelligence_summary = COALESCE(?, intelligence_summary),
-            updated_at = CURRENT_TIMESTAMP 
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
         "#,
     )
@@ -397,7 +360,6 @@ async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Re
     .bind(args.last_name)
     .bind(args.email)
     .bind(args.linkedin_url)
-    .bind(&resolved_status_label)
     .bind(&args.status_id)
     .bind(args.last_contacted_date)
     .bind(args.next_contact_date)
@@ -413,18 +375,18 @@ async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Re
 
     // Write a status_change activity event when status_id is explicitly changed.
     // Errors here are intentionally ignored — the contact update already succeeded.
-    if let (Some(_), Some(ref label)) = (&args.status_id, &resolved_status_label) {
-        let event_id = uuid::Uuid::new_v4().to_string();
-        let title = format!("Moved to {}", label);
-        let _ = sqlx::query(
-            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
-        )
-        .bind(&event_id)
-        .bind(&args.id)
-        .bind(&title)
-        .bind(Option::<String>::None)
-        .execute(pool)
-        .await;
+    // Write a status_change activity event when status_id is explicitly changed.
+    // Errors here are intentionally ignored — the contact update already succeeded.
+    if let Some(ref sid) = args.status_id {
+        let label: Option<String> =
+            sqlx::query_scalar("SELECT label FROM statuses WHERE id = ?")
+                .bind(sid)
+                .fetch_optional(pool)
+                .await
+                .unwrap_or(None);
+        if let Some(ref label) = label {
+            log_activity_event(pool, &args.id, &format!("Moved to {}", label)).await;
+        }
     }
 
     Ok(())
@@ -437,7 +399,7 @@ async fn clear_contact_next_date(db: tauri::State<'_, Db>, id: String) -> Result
         .bind(&id)
         .execute(pool)
         .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        ?;
     Ok(())
 }
 
@@ -557,7 +519,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             get_contacts,
             get_statuses,
             create_status,
@@ -655,7 +616,7 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, AppErro
     let status_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM statuses")
         .fetch_one(pool)
         .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        ?;
 
     if status_count == 0 {
         sqlx::query(
@@ -669,47 +630,40 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, AppErro
             "#,
         )
         .execute(pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
     }
 
     // Cleanup legacy status rows (safe to always run)
     sqlx::query("DELETE FROM statuses WHERE id = 'stat-int-ni'")
         .execute(pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
 
     sqlx::query("DELETE FROM statuses WHERE id LIKE 'def-stat-%'")
         .execute(pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
 
     sqlx::query("DELETE FROM statuses WHERE label LIKE '%_legacy'")
         .execute(pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
 
     // Determine the fallback status (default or first by position)
     let fallback: Option<String> =
         sqlx::query_scalar("SELECT id FROM statuses ORDER BY position ASC LIMIT 1")
             .fetch_optional(pool)
-            .await
-            .map_err(|e: sqlx::Error| e.to_string())?;
+            .await?;
 
     if let Some(ref fallback_id) = fallback {
         // Fix NULL status_id
         sqlx::query("UPDATE contacts SET status_id = ? WHERE status_id IS NULL")
             .bind(fallback_id)
             .execute(pool)
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
 
         // Fix legacy def-stat-* IDs
         sqlx::query("UPDATE contacts SET status_id = ? WHERE status_id LIKE 'def-stat-%'")
             .bind(fallback_id)
             .execute(pool)
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
 
         // Fix contacts whose status_id references a status that no longer exists.
         // Use the actual statuses table — not a hardcoded list — so user-created
@@ -719,8 +673,7 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, AppErro
         )
         .bind(fallback_id)
         .execute(pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
     }
 
     Ok("ok".to_string())
@@ -902,18 +855,7 @@ async fn email_send(
     // Write an email_sent activity event if this email is linked to a contact.
     // Errors here are intentionally ignored — the send already succeeded.
     if let Some(ref cid) = contact_id {
-        let pool = db.pool();
-        let event_id = uuid::Uuid::new_v4().to_string();
-        let title = format!("Email sent: {}", subject);
-        let _ = sqlx::query(
-            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
-        )
-        .bind(&event_id)
-        .bind(cid)
-        .bind(&title)
-        .bind(Option::<String>::None)
-        .execute(pool)
-        .await;
+        log_activity_event(db.pool(), cid, &format!("Email sent: {}", subject)).await;
     }
 
     Ok(result)
@@ -942,20 +884,7 @@ async fn email_schedule(
         .await
         .map_err(|e| AppError::from(e.to_string()))?;
 
-    // Write an email_scheduled activity event.
-    // Errors here are intentionally ignored — the schedule already succeeded.
-    let pool = db.pool();
-    let event_id = uuid::Uuid::new_v4().to_string();
-    let title = format!("Email scheduled: {}", subject);
-    let _ = sqlx::query(
-        "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
-    )
-    .bind(&event_id)
-    .bind(&contact_id)
-    .bind(&title)
-    .bind(Option::<String>::None)
-    .execute(pool)
-    .await;
+    log_activity_event(db.pool(), &contact_id, &format!("Email scheduled: {}", subject)).await;
 
     Ok(result)
 }
@@ -1328,8 +1257,7 @@ async fn save_api_key(
     let manager = jobdex_core::settings::SettingsManager::new(db.pool().clone());
     manager
         .set(&service, &key)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
     #[cfg(debug_assertions)]
     println!("--- [DB Debug] Key saved successfully ---");
     Ok(())
@@ -1401,7 +1329,7 @@ async fn export_all_data(db: tauri::State<'_, Db>) -> Result<String, AppError> {
         r#"
         SELECT
             c.id, c.company_id, c.first_name, c.last_name, c.email, c.linkedin_url,
-            c.title, c.company, c.location, c.company_website, c.status, c.status_id,
+            c.title, c.company, c.location, c.company_website, c.status_id,
             s.label as status_label, s.color as status_color,
             c.intelligence_summary, c.last_interaction_at, c.last_contacted_date,
             c.next_contact_date, NULL as effective_next_date, c.next_contact_event,
@@ -1636,6 +1564,7 @@ async fn export_all_data_to_path(
 }
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ImportSummary {
     contacts_added: i32,
     contacts_updated: i32,
@@ -2108,6 +2037,39 @@ struct ContactIdentity {
     company: Option<String>,
 }
 
+/// Returns true if `existing` matches `candidate` by any of the three dedup rules:
+/// email (case-insensitive), LinkedIn slug, or full-name + company.
+fn is_contact_duplicate(
+    existing: &ContactIdentity,
+    candidate: &jobdex_core::import::ImportedContact,
+) -> bool {
+    if let (Some(e1), Some(e2)) = (&existing.email, &candidate.email) {
+        let e1: &str = e1;
+        if !e1.is_empty() && e1.eq_ignore_ascii_case(e2) {
+            return true;
+        }
+    }
+    if let (Some(l1), Some(l2)) = (&existing.linkedin_url, &candidate.linkedin_url) {
+        let l1: &str = l1;
+        if !l1.is_empty()
+            && (l1 == l2.as_str() || extract_linkedin_slug(l1) == extract_linkedin_slug(l2))
+        {
+            return true;
+        }
+    }
+    if existing.first_name.eq_ignore_ascii_case(&candidate.first_name)
+        && existing.last_name.eq_ignore_ascii_case(&candidate.last_name)
+    {
+        if let (Some(c1), Some(c2)) = (&existing.company, &candidate.company) {
+            let c1: &str = c1;
+            if !c1.is_empty() && c1.eq_ignore_ascii_case(c2) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 #[tauri::command]
 async fn analyze_import(
     db: tauri::State<'_, Db>,
@@ -2128,39 +2090,7 @@ async fn analyze_import(
     let mut duplicate_count = 0;
 
     for candidate in &contacts {
-        let is_duplicate = existing.iter().any(|e| {
-            // 1. Email Match (Exact)
-            if let (Some(e1), Some(e2)) = (&e.email, &candidate.email) {
-                let e1_str: &str = e1;
-                if !e1_str.is_empty() && e1_str.eq_ignore_ascii_case(e2) {
-                    return true;
-                }
-            }
-
-            // 2. LinkedIn Match (Slug or Exact)
-            if let (Some(l1), Some(l2)) = (&e.linkedin_url, &candidate.linkedin_url) {
-                let l1_str: &str = l1;
-                if !l1_str.is_empty()
-                    && (l1 == l2 || extract_linkedin_slug(l1) == extract_linkedin_slug(l2))
-                {
-                    return true;
-                }
-            }
-
-            // 3. Name + Company Match (Fuzzy-ish fallback)
-            if e.first_name.eq_ignore_ascii_case(&candidate.first_name)
-                && e.last_name.eq_ignore_ascii_case(&candidate.last_name)
-            {
-                if let (Some(c1), Some(c2)) = (&e.company, &candidate.company) {
-                    let c1_str: &str = c1;
-                    if !c1_str.is_empty() && c1_str.eq_ignore_ascii_case(c2) {
-                        return true;
-                    }
-                }
-            }
-
-            false
-        });
+        let is_duplicate = existing.iter().any(|e| is_contact_duplicate(e, candidate));
 
         if is_duplicate {
             duplicate_count += 1;
@@ -2202,8 +2132,7 @@ async fn import_contacts(
             "SELECT id, email, linkedin_url, first_name, last_name, company FROM contacts",
         )
         .fetch_all(pool)
-        .await
-        .map_err(|e| e.to_string())?
+        .await?
     } else {
         vec![]
     };
@@ -2218,40 +2147,9 @@ async fn import_contacts(
         let mut duplicate_id: Option<String> = None;
 
         if mode != "none" {
-            // Find duplicate ID
             duplicate_id = existing
                 .iter()
-                .find(|e| {
-                    // Same logic as analyze
-                    // 1. Email
-                    if let (Some(e1), Some(e2)) = (&e.email, &contact.email) {
-                        let e1_str: &str = e1;
-                        if !e1_str.is_empty() && e1_str.eq_ignore_ascii_case(e2) {
-                            return true;
-                        }
-                    }
-                    // 2. LinkedIn
-                    if let (Some(l1), Some(l2)) = (&e.linkedin_url, &contact.linkedin_url) {
-                        let l1_str: &str = l1;
-                        if !l1_str.is_empty()
-                            && (l1 == l2 || extract_linkedin_slug(l1) == extract_linkedin_slug(l2))
-                        {
-                            return true;
-                        }
-                    }
-                    // 3. Name + Company
-                    if e.first_name.eq_ignore_ascii_case(&contact.first_name)
-                        && e.last_name.eq_ignore_ascii_case(&contact.last_name)
-                    {
-                        if let (Some(c1), Some(c2)) = (&e.company, &contact.company) {
-                            let c1_str: &str = c1;
-                            if !c1_str.is_empty() && c1_str.eq_ignore_ascii_case(c2) {
-                                return true;
-                            }
-                        }
-                    }
-                    false
-                })
+                .find(|e| is_contact_duplicate(e, &contact))
                 .map(|e| e.id.clone());
         }
 
@@ -2297,19 +2195,10 @@ async fn import_contacts(
         } else {
             // Insert New - use position-based default status (top of the list)
             let id = uuid::Uuid::new_v4().to_string();
-            let default_status: Option<(String, String)> =
-                sqlx::query_as("SELECT id, label FROM statuses ORDER BY position ASC LIMIT 1")
-                    .fetch_optional(pool)
-                    .await
-                    .map_err(|e: sqlx::Error| e.to_string())?;
-
-            let (status_label, status_id) = match default_status {
-                Some((id, label)) => (label, id),
-                None => ("Imported".to_string(), String::new()),
-            };
+            let status_id: String = fetch_default_status_id(pool).await?;
 
             let result = sqlx::query(
-                "INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, company, title, location, company_website, intelligence_summary, status, status_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, company, title, location, company_website, intelligence_summary, status_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )
                 .bind(&id)
                 .bind(&contact.first_name)
@@ -2321,7 +2210,6 @@ async fn import_contacts(
                 .bind(&contact.location)
                 .bind(&contact.company_website)
                 .bind(&contact.intelligence_summary)
-                .bind(&status_label)
                 .bind(&status_id)
                 .execute(pool)
                 .await;
@@ -2376,21 +2264,11 @@ async fn update_contacts_status_bulk(
     let pool = db.pool();
     let mut tx = pool.begin().await?;
 
-    // Fetch the label for the given status_id to keep legacy 'status' column in sync
-    let status_label: Option<String> =
-        sqlx::query_scalar("SELECT label FROM statuses WHERE id = ?")
-            .bind(&status_id)
-            .fetch_optional(&mut *tx)
-            .await?;
-
     let mut affected_count = 0;
 
     for id in ids {
-        let result = sqlx::query(
-            "UPDATE contacts SET status_id = ?, status = COALESCE(?, status) WHERE id = ?",
-        )
+        let result = sqlx::query("UPDATE contacts SET status_id = ? WHERE id = ?")
         .bind(&status_id)
-        .bind(&status_label)
         .bind(id)
         .execute(&mut *tx)
         .await?;
@@ -2481,17 +2359,7 @@ async fn assign_tag(
             .ok()
             .flatten();
     if let Some(name) = tag_name {
-        let event_id = uuid::Uuid::new_v4().to_string();
-        let title = format!("Tag added: {}", name);
-        let _ = sqlx::query(
-            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
-        )
-        .bind(&event_id)
-        .bind(&contact_id)
-        .bind(&title)
-        .bind(Option::<String>::None)
-        .execute(pool)
-        .await;
+        log_activity_event(pool, &contact_id, &format!("Tag added: {}", name)).await;
     }
 
     Ok(())
@@ -2522,17 +2390,7 @@ async fn unassign_tag(
     // Write a tag_removed activity event.
     // Errors here are intentionally ignored — the unassignment already succeeded.
     if let Some(name) = tag_name {
-        let event_id = uuid::Uuid::new_v4().to_string();
-        let title = format!("Tag removed: {}", name);
-        let _ = sqlx::query(
-            "INSERT INTO contact_events (id, contact_id, title, description, event_at, event_type) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'activity')",
-        )
-        .bind(&event_id)
-        .bind(&contact_id)
-        .bind(&title)
-        .bind(Option::<String>::None)
-        .execute(pool)
-        .await;
+        log_activity_event(pool, &contact_id, &format!("Tag removed: {}", name)).await;
     }
 
     Ok(())

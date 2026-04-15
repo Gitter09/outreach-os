@@ -17,8 +17,7 @@ const GOOGLE_SCOPES: &[&str] = &[
     "https://www.googleapis.com/auth/userinfo.email",
 ];
 
-// Centralized OAuth Defaults
-// To be replaced with actual Client ID/Secret from Google Cloud Console
+// Baked-in OAuth defaults; override at build time via GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET env vars.
 const DEFAULT_GMAIL_CLIENT_ID: &str = match option_env!("GMAIL_CLIENT_ID") {
     Some(id) => id,
     None => "PLACEHOLDER_GMAIL_CLIENT_ID",

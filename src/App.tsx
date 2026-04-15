@@ -11,6 +11,7 @@ import { TasksPage } from "@/pages/TasksPage";
 import { TemplatesPage } from "@/pages/TemplatesPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { ErrorBoundary } from "@/components/error-boundary/ErrorBoundary";
+import { useErrors } from "@/hooks/use-errors";
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -23,13 +24,13 @@ window.onerror = (msg, url, line) => {
 
 function App() {
   const [isLocked, setIsLocked] = useState<boolean | null>(null);
+  const { handleError } = useErrors();
 
   useEffect(() => {
     // Listen for background scheduled email failures
     const unlistenScheduleFailure = listen<{ email_id: string; to_email: string; subject: string; error: string }>(
       "email_schedule_failed",
       (event) => {
-        // Use dynamic import or standard toast
         import("sonner").then(({ toast }) => {
           toast.error(`Scheduled Email Failed`, {
             description: `Failed to send to ${event.payload.to_email}: ${event.payload.error}. Retrying later...`,
@@ -41,16 +42,11 @@ function App() {
 
     const checkLock = async () => {
       try {
-        // The Rust function `has_lock_pin` now returns Result<bool, String>.
-        // `invoke` will resolve with the `bool` on success, or reject with the `String` on error.
         const hasPin = await invoke<boolean>("has_lock_pin");
         setIsLocked(hasPin);
       } catch (err) {
-        console.error("Security system error:", err);
-        // If there's an error (e.g., keychain inaccessible), we treat it as if no PIN is set
-        // and allow access, but log the error.
-        // A more robust solution might display a toast or a specific error message to the user.
-        setIsLocked(false);
+        handleError(err, "Security check failed — please restart the app");
+        setIsLocked(true);
       }
     };
     checkLock();

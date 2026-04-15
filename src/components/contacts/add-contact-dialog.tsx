@@ -40,7 +40,6 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
 
     const [loading, setLoading] = useState(false);
 
-    // Form state
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [title, setTitle] = useState("");
@@ -51,7 +50,6 @@ export function AddContactDialog({ onContactAdded, open: controlledOpen, onOpenC
     const [companyWebsite, setCompanyWebsite] = useState("");
     const [selectedStatusId, setSelectedStatusId] = useState(initialStatusId || "");
 
-    // New status handling
     const [isCreatingNewStatus, setIsCreatingNewStatus] = useState(false);
     const [newStatusLabel, setNewStatusLabel] = useState("");
     const [selectedColor, setSelectedColor] = useState("#3b82f6"); // Default Blue

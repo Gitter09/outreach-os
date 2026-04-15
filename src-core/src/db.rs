@@ -124,19 +124,14 @@ pub mod models {
         pub email: Option<String>,
         pub linkedin_url: Option<String>,
 
-        // New fields for Contact Detail Redesign
         pub title: Option<String>,
         pub company: Option<String>,
         pub location: Option<String>,
         pub company_website: Option<String>,
 
-        // Legacy status field (text), optional or deprecated
-        pub status: Option<String>,
-
-        // New Status System
         pub status_id: Option<String>,
-        pub status_label: Option<String>, // Join result
-        pub status_color: Option<String>, // Join result
+        pub status_label: Option<String>, // populated via LEFT JOIN to statuses
+        pub status_color: Option<String>, // populated via LEFT JOIN to statuses
 
         #[serde(rename = "summary")]
         pub intelligence_summary: Option<String>,
@@ -186,18 +181,7 @@ pub mod models {
         pub updated_at: DateTime<Utc>,
     }
 
-    #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
-    pub struct EmailThread {
-        pub id: String,
-        pub contact_id: String,
-        pub account_id: String,
-        pub subject: Option<String>,
-        pub last_message_at: Option<DateTime<Utc>>,
-        pub created_at: DateTime<Utc>,
-        pub updated_at: DateTime<Utc>,
-    }
-
-    #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
     pub struct EmailMessage {
         pub id: String,
         pub thread_id: String,

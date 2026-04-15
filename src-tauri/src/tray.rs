@@ -16,7 +16,7 @@ pub fn should_exit() -> bool {
 
 /// Build and attach the system tray icon + menu.
 /// Call this once inside `.setup()`.
-pub fn setup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup(app: &AppHandle) -> Result<(), tauri::Error> {
     let show = MenuItemBuilder::with_id("show", "Show JobDex").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit JobDex").build(app)?;
 
