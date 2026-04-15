@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useErrors } from "@/hooks/use-errors";
 
 export interface Settings {
     [key: string]: string | undefined;
@@ -24,13 +25,14 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
     const [settings, setSettings] = useState<Settings>({});
     const [loading, setLoading] = useState(true);
+    const { handleError } = useErrors();
 
     const fetchSettings = useCallback(async () => {
         try {
             const data = await invoke<Settings>("get_settings");
             setSettings(data);
         } catch (error) {
-            console.error("Failed to load settings:", error);
+            handleError(error, "Failed to load settings");
         } finally {
             setLoading(false);
         }
@@ -47,8 +49,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         try {
             await invoke("save_setting", { key, value });
         } catch (error) {
-            console.error(`Failed to save setting ${key}:`, error);
-            // Revert on error? For now, we assume success and let next fetch correct it
+            handleError(error, `Failed to save setting: ${key}`);
             fetchSettings();
         }
     };

@@ -28,7 +28,7 @@ export function SecuritySettingsTab() {
             const status = await invoke<boolean>("has_lock_pin");
             setHasPin(status);
         } catch (error) {
-            handleError(error, "Couldn't access your computer's keychain.");
+            handleError(error, "Couldn't verify PIN status");
             setHasPin(false);
         }
     };

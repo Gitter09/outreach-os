@@ -116,7 +116,7 @@ export function ContactsPage() {
                 const dateB = b.last_contacted_date ? new Date(b.last_contacted_date).getTime() : 0;
                 return dateB - dateA;
             case "status":
-                return (a.status_label || a.status || "").localeCompare(b.status_label || b.status || "");
+                return (a.status_label || "").localeCompare(b.status_label || "");
             case "added_desc":
             default:
                 return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -523,7 +523,7 @@ export function ContactsPage() {
                                                                         borderColor: `${hex}40`
                                                                     }}
                                                                 >
-                                                                    {contact.status_label || contact.status || "New"}
+                                                                    {contact.status_label || "New"}
                                                                 </span>
                                                             );
                                                         })()}

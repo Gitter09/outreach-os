@@ -44,7 +44,6 @@ export function EditContactDialog({ contact, open, onOpenChange, onContactUpdate
     const [loading, setLoading] = useState(false);
     const { handleError } = useErrors();
 
-    // Form state
     const [firstName, setFirstName] = useState(contact.first_name);
     const [lastName, setLastName] = useState(contact.last_name);
     const [title, setTitle] = useState(contact.title || "");
@@ -58,7 +57,6 @@ export function EditContactDialog({ contact, open, onOpenChange, onContactUpdate
 
     const { statuses } = useStatuses();
 
-    // Reset form when contact changes
     useEffect(() => {
         if (open) {
             setFirstName(contact.first_name);

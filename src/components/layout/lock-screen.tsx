@@ -47,9 +47,6 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
         }
     };
 
-    // Auto-submit when PIN reaches 4-8 digits? Maybe just 4 if that's the common case.
-    // Better to let user click "Unlock" or use Enter.
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key >= "0" && e.key <= "9") {

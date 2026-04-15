@@ -53,7 +53,7 @@ export function SettingsPage() {
     const navigate = useNavigate();
     const activeTab = (tab as SettingsTab) || "appearance";
 
-    const { settings, loading, updateSetting } = useSettings();
+    const { settings, updateSetting } = useSettings();
     const { handleError } = useErrors();
 
     const [autostart, setAutostart] = useState(false);
@@ -82,19 +82,11 @@ export function SettingsPage() {
         }
     };
 
-    // Redirect /settings to /settings/ai
     useEffect(() => {
         if (!tab) {
             navigate("/settings/appearance", { replace: true });
         }
     }, [tab, navigate]);
-
-    // Sync from settings hook
-    useEffect(() => {
-        if (!loading) {
-            // Placeholder for future manual settings sync
-        }
-    }, [settings, loading]);
 
 
     const handleSettingChange = (key: string, value: string) => {

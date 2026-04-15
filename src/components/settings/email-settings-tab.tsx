@@ -15,18 +15,8 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { useErrors } from "@/hooks/use-errors";
-import { EmailAccount, EmailSignature } from "@/types/crm";
+import { EmailAccount, EmailSignature, SyncResult } from "@/types/crm";
 import { EditSignatureDialog } from "@/components/settings/EditSignatureDialog";
-
-interface SyncResult {
-    account_id: string;
-    account_email: string;
-    provider: string;
-    synced_count: number;
-    skipped_count: number;
-    token_expired: boolean;
-    error?: string;
-}
 
 export function EmailSettingsTab() {
     const [accounts, setAccounts] = useState<EmailAccount[]>([]);

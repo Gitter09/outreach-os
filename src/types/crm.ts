@@ -11,9 +11,6 @@ export interface Contact {
     linkedin_url?: string;
     company_website?: string;
 
-    // Legacy support (will be populated with status_label from join)
-    status?: string;
-
     status_id?: string;
     status_label?: string;
     status_color?: string;
@@ -114,6 +111,47 @@ export interface EmailSignature {
     content: string;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface SyncResult {
+    account_id: string;
+    account_email: string;
+    provider: string;
+    synced_count: number;
+    skipped_count: number;
+    token_expired: boolean;
+    error?: string;
+}
+
+export interface ImportPreview {
+    headers: string[];
+    total_rows: number;
+}
+
+export interface ImportAnalysis {
+    total_detected: number;
+    new_count: number;
+    duplicate_count: number;
+}
+
+export interface ImportResult {
+    imported: number;
+    skipped: number;
+    merged: number;
+    failed: number;
+    errors: string[];
+}
+
+export interface ColumnMapping {
+    first_name: number | null;
+    last_name: number | null;
+    email: number | null;
+    linkedin_url: number | null;
+    company: number | null;
+    title: number | null;
+    location: number | null;
+    company_website: number | null;
+    intelligence_summary: number[];
 }
 
 export interface ImportSummary {

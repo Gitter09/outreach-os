@@ -24,42 +24,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useErrors } from "@/hooks/use-errors";
+import { ImportPreview, ImportAnalysis, ImportResult, ColumnMapping } from "@/types/crm";
 
 interface ImportDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onImportComplete?: () => void;
-}
-
-interface ImportPreview {
-    headers: string[];
-    total_rows: number;
-}
-
-interface ImportAnalysis {
-    total_detected: number;
-    new_count: number;
-    duplicate_count: number;
-}
-
-interface ImportResult {
-    imported: number;
-    skipped: number;
-    merged: number;
-    failed: number;
-    errors: string[];
-}
-
-interface ColumnMapping {
-    first_name: number | null;
-    last_name: number | null;
-    email: number | null;
-    linkedin_url: number | null;
-    company: number | null;
-    title: number | null;
-    location: number | null;
-    company_website: number | null;
-    intelligence_summary: number[];
 }
 
 const EMPTY_MAPPING: ColumnMapping = {

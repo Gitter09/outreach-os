@@ -31,21 +31,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Send, Loader2, Calendar as CalendarIcon, FileText, Clock, Trash2, Pencil, X, Check, Paperclip } from "lucide-react";
-import { Contact, EmailTemplate, ScheduledEmail, EmailSignature } from "@/types/crm";
+import { Contact, EmailAccount, EmailTemplate, ScheduledEmail, EmailSignature } from "@/types/crm";
 import { format } from "date-fns";
-
 
 interface ComposeEmailDialogProps {
     contact: Contact | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEmailSent?: () => void;
-}
-
-interface EmailAccount {
-    id: string;
-    email: string;
-    provider: string;
 }
 
 export function ComposeEmailDialog({
@@ -60,36 +53,23 @@ export function ComposeEmailDialog({
     const [body, setBody] = useState("");
     const [sending, setSending] = useState(false);
 
-    // Account Selection
     const [accounts, setAccounts] = useState<EmailAccount[]>([]);
     const [selectedAccount, setSelectedAccount] = useState<string>("");
-
-    // Templates
     const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-
-    // Schedule send
     const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
     const [scheduledTime, setScheduledTime] = useState("");
     const [isScheduling, setIsScheduling] = useState(false);
-
-    // Signatures
     const [signatures, setSignatures] = useState<EmailSignature[]>([]);
     const [selectedSignatureId, setSelectedSignatureId] = useState<string>("none");
     const SIGNATURE_SEPARATOR_HTML = '<hr class="signature-separator" />';
-
-    // Scheduled emails viewer
     const [contactScheduled, setContactScheduled] = useState<ScheduledEmail[]>([]);
     const [showScheduledDialog, setShowScheduledDialog] = useState(false);
-
-    // Edit scheduled email
     const [editingEmail, setEditingEmail] = useState<ScheduledEmail | null>(null);
     const [editSubject, setEditSubject] = useState("");
     const [editBody, setEditBody] = useState("");
     const [editDate, setEditDate] = useState<Date | undefined>(undefined);
     const [editTime, setEditTime] = useState("");
     const [editSaving, setEditSaving] = useState(false);
-
-    // Attachments
     const [attachments, setAttachments] = useState<string[]>([]);
 
     // Variable insertion — track which field is focused

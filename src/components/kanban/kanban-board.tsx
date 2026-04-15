@@ -35,15 +35,6 @@ interface KanbanBoardProps {
 export function KanbanBoard({ contacts, statuses, onContactMove, onContactClick, onAddContact, onEditStatus, onDeleteStatus, onAddStatus }: KanbanBoardProps) {
     const [activeId, setActiveId] = useState<string | null>(null);
 
-    // Group contacts by status_id
-    // We memoize this, but strictly speaking dnd-kit might need local state for optimistic UI 
-    // if we want instant visual feedback before the parent updates 'contacts'.
-    // For specific "sortable" behavior across columns, local state is often required.
-    // However, if onContactMove updates the parent state fast enough, it might be clear.
-    // BUT dnd-kit suggests local state for smooth animations.
-
-    // For V1, let's rely on parent state props, but we need to find the container.
-
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -63,10 +54,7 @@ export function KanbanBoard({ contacts, statuses, onContactMove, onContactClick,
         setActiveId(event.active.id as string);
     };
 
-    const handleDragOver = () => {
-        // We typically handle reordering here if we had local state, 
-        // but for now we focus on dropping into a container.
-    };
+    const handleDragOver = () => {};
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
@@ -77,16 +65,12 @@ export function KanbanBoard({ contacts, statuses, onContactMove, onContactClick,
         }
 
         const activeContactId = active.id as string;
-        // The over.id could be a column ID (if dropped on empty space) or a card ID (if dropped on another card)
-
         let newStatusId = "";
 
-        // Check if dropped on a Status Column directly
         const droppedOnStatus = statuses.find(s => s.id === over.id);
         if (droppedOnStatus) {
             newStatusId = droppedOnStatus.id;
         } else {
-            // Dropped on another Card? Find that card's status
             const overContact = contacts.find(c => c.id === over.id);
             if (overContact?.status_id) {
                 newStatusId = overContact.status_id;
