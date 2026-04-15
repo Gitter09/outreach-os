@@ -55,7 +55,8 @@ release_notes/
 .cursor/
 .windsurf/
 GEMINI.md
-
+AGENTS.md
+ENGINEERING.md
 
 # Lock files — Bun only, not npm
 package-lock.json

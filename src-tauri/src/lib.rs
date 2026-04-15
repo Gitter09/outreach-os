@@ -426,7 +426,7 @@ async fn disable_background_service() -> Result<(), AppError> {
 async fn is_background_service_enabled() -> Result<bool, AppError> {
     #[cfg(target_os = "macos")]
     {
-        return launchagent::is_enabled();
+        launchagent::is_enabled()
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -2772,7 +2772,7 @@ async fn check_for_update() -> Result<String, AppError> {
 
 #[tauri::command]
 async fn generate_api_key(db: tauri::State<'_, Db>) -> Result<String, AppError> {
-    let key = format!("jd_{}", hex::encode(&rand::random::<[u8; 24]>()));
+    let key = format!("jd_{}", hex::encode(rand::random::<[u8; 24]>()));
     let manager = jobdex_core::settings::SettingsManager::new(db.pool().clone());
     manager
         .set("api_key", &key)

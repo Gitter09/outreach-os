@@ -80,7 +80,7 @@ pub async fn update_event(
     )
     .bind(&body.title)
     .bind(&body.description)
-    .bind(&body.event_at)
+    .bind(body.event_at)
     .bind(&event_id)
     .execute(&state.pool)
     .await?;
