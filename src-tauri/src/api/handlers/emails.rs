@@ -1,24 +1,33 @@
+use crate::api::{
+    error::{ApiError, ApiResponse},
+    AppState,
+};
 use axum::{
     extract::{Path, Query, State},
     Json,
 };
 use serde::Deserialize;
-use crate::api::{AppState, error::{ApiError, ApiResponse}};
 
 pub async fn list_accounts(
     State(state): State<AppState>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, ApiError> {
     let service = jobdex_core::EmailService::new(jobdex_core::Db::from_pool(state.pool.clone()));
-    let accounts = service.list_accounts().await.map_err(|e| ApiError::Internal(e.to_string()))?;
-    let safe: Vec<serde_json::Value> = accounts.iter().map(|a| {
-        serde_json::json!({
-            "id": a.id,
-            "provider": a.provider,
-            "email": a.email,
-            "expires_at": a.expires_at,
-            "last_synced_at": a.last_synced_at,
+    let accounts = service
+        .list_accounts()
+        .await
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    let safe: Vec<serde_json::Value> = accounts
+        .iter()
+        .map(|a| {
+            serde_json::json!({
+                "id": a.id,
+                "provider": a.provider,
+                "email": a.email,
+                "expires_at": a.expires_at,
+                "last_synced_at": a.last_synced_at,
+            })
         })
-    }).collect();
+        .collect();
     Ok(Json(ApiResponse::ok(safe)))
 }
 
@@ -27,15 +36,23 @@ pub async fn delete_account(
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
     let service = jobdex_core::EmailService::new(jobdex_core::Db::from_pool(state.pool.clone()));
-    service.delete_account(&id).await.map_err(|e| ApiError::Internal(e.to_string()))?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": true }))))
+    service
+        .delete_account(&id)
+        .await
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "deleted": true }),
+    )))
 }
 
 pub async fn sync_all(
     State(state): State<AppState>,
 ) -> Result<Json<ApiResponse<Vec<jobdex_core::SyncResult>>>, ApiError> {
     let service = jobdex_core::EmailService::new(jobdex_core::Db::from_pool(state.pool.clone()));
-    let results = service.sync_all_accounts().await.map_err(|e| ApiError::Internal(e.to_string()))?;
+    let results = service
+        .sync_all_accounts()
+        .await
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
     Ok(Json(ApiResponse::ok(results)))
 }
 
@@ -44,7 +61,10 @@ pub async fn sync_account(
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<jobdex_core::SyncResult>>, ApiError> {
     let service = jobdex_core::EmailService::new(jobdex_core::Db::from_pool(state.pool.clone()));
-    let result = service.sync_account(&id).await.map_err(|e| ApiError::Internal(e.to_string()))?;
+    let result = service
+        .sync_account(&id)
+        .await
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
     Ok(Json(ApiResponse::ok(result)))
 }
 
@@ -99,7 +119,13 @@ pub async fn send_email(
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
     let service = jobdex_core::EmailService::new(jobdex_core::Db::from_pool(state.pool.clone()));
     let message_id = service
-        .send_email(&body.account_id, &body.to, &body.subject, &body.body, vec![])
+        .send_email(
+            &body.account_id,
+            &body.to,
+            &body.subject,
+            &body.body,
+            vec![],
+        )
         .await
         .map_err(|e| ApiError::Internal(e.to_string()))?;
 
@@ -116,7 +142,9 @@ pub async fn send_email(
         .await;
     }
 
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "message_id": message_id }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "message_id": message_id }),
+    )))
 }
 
 #[derive(Deserialize)]
@@ -135,7 +163,14 @@ pub async fn schedule_email(
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
     let service = jobdex_core::EmailService::new(jobdex_core::Db::from_pool(state.pool.clone()));
     let id = service
-        .schedule_email(&body.account_id, &body.contact_id, &body.subject, &body.body, body.scheduled_at, vec![])
+        .schedule_email(
+            &body.account_id,
+            &body.contact_id,
+            &body.subject,
+            &body.body,
+            body.scheduled_at,
+            vec![],
+        )
         .await
         .map_err(|e| ApiError::Internal(e.to_string()))?;
 
@@ -209,21 +244,24 @@ pub async fn list_scheduled(
         .await?
     };
 
-    let result: Vec<serde_json::Value> = rows.iter().map(|r| {
-        serde_json::json!({
-            "id": r.id,
-            "contactId": r.contact_id,
-            "contactFirstName": r.contact_first_name,
-            "contactLastName": r.contact_last_name,
-            "accountId": r.account_id,
-            "subject": r.subject,
-            "body": r.body,
-            "scheduledAt": r.scheduled_at,
-            "status": r.status,
-            "errorMessage": r.error_message,
-            "createdAt": r.created_at,
+    let result: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|r| {
+            serde_json::json!({
+                "id": r.id,
+                "contactId": r.contact_id,
+                "contactFirstName": r.contact_first_name,
+                "contactLastName": r.contact_last_name,
+                "accountId": r.account_id,
+                "subject": r.subject,
+                "body": r.body,
+                "scheduledAt": r.scheduled_at,
+                "status": r.status,
+                "errorMessage": r.error_message,
+                "createdAt": r.created_at,
+            })
         })
-    }).collect();
+        .collect();
 
     Ok(Json(ApiResponse::ok(result)))
 }
@@ -259,7 +297,9 @@ pub async fn update_scheduled(
             .execute(&state.pool)
             .await?;
     }
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "updated": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "updated": true }),
+    )))
 }
 
 pub async fn cancel_scheduled(
@@ -270,5 +310,7 @@ pub async fn cancel_scheduled(
         .bind(&id)
         .execute(&state.pool)
         .await?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "cancelled": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "cancelled": true }),
+    )))
 }

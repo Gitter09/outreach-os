@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 
-use crate::api::AppState;
 use crate::api::error::{ApiError, ApiResponse};
+use crate::api::AppState;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
@@ -90,17 +90,15 @@ pub async fn list_contacts(
 ) -> Result<Json<ApiResponse<Vec<ContactWithTags>>>, ApiError> {
     let pool = &state.pool;
 
-    let contacts: Vec<ContactWithTags> = if params.search.is_some()
-        || params.status_id.is_some()
-        || params.tag.is_some()
-    {
-        search_contacts_query(pool, &params.search, &params.status_id, &params.tag).await?
-    } else {
-        let sql = format!("{} ORDER BY c.updated_at DESC", CONTACT_SELECT_BASE);
-        sqlx::query_as::<_, ContactWithTags>(&sql)
-            .fetch_all(pool)
-            .await?
-    };
+    let contacts: Vec<ContactWithTags> =
+        if params.search.is_some() || params.status_id.is_some() || params.tag.is_some() {
+            search_contacts_query(pool, &params.search, &params.status_id, &params.tag).await?
+        } else {
+            let sql = format!("{} ORDER BY c.updated_at DESC", CONTACT_SELECT_BASE);
+            sqlx::query_as::<_, ContactWithTags>(&sql)
+                .fetch_all(pool)
+                .await?
+        };
 
     let enriched = enrich_with_tags(pool, contacts).await?;
     Ok(Json(ApiResponse::ok(enriched)))
@@ -111,7 +109,10 @@ pub async fn get_contact(
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<ContactWithTags>>, ApiError> {
     let pool = &state.pool;
-    let sql = format!("{} WHERE c.id = ? ORDER BY c.updated_at DESC", CONTACT_SELECT_BASE);
+    let sql = format!(
+        "{} WHERE c.id = ? ORDER BY c.updated_at DESC",
+        CONTACT_SELECT_BASE
+    );
     let contact = sqlx::query_as::<_, ContactWithTags>(&sql)
         .bind(&id)
         .fetch_optional(pool)
@@ -180,7 +181,10 @@ pub async fn create_contact(
         .await?;
 
     #[cfg(debug_assertions)]
-    println!("[API] Created contact {} '{} {}'", id, body.first_name, body.last_name);
+    println!(
+        "[API] Created contact {} '{} {}'",
+        id, body.first_name, body.last_name
+    );
 
     Ok(Json(ApiResponse::ok(serde_json::json!({ "id": id }))))
 }
@@ -211,16 +215,12 @@ pub async fn update_contact(
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
     let pool = &state.pool;
 
-    let exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM contacts WHERE id = ?)")
-            .bind(&id)
-            .fetch_one(pool)
-            .await?;
+    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM contacts WHERE id = ?)")
+        .bind(&id)
+        .fetch_one(pool)
+        .await?;
     if !exists {
-        return Err(ApiError::NotFound(format!(
-            "Contact '{}' not found",
-            id
-        )));
+        return Err(ApiError::NotFound(format!("Contact '{}' not found", id)));
     }
 
     sqlx::query(
@@ -261,13 +261,12 @@ pub async fn update_contact(
     .await?;
 
     if let Some(ref sid) = body.status_id {
-        let label: Option<String> =
-            sqlx::query_scalar("SELECT label FROM statuses WHERE id = ?")
-                .bind(sid)
-                .fetch_optional(pool)
-                .await
-                .ok()
-                .flatten();
+        let label: Option<String> = sqlx::query_scalar("SELECT label FROM statuses WHERE id = ?")
+            .bind(sid)
+            .fetch_optional(pool)
+            .await
+            .ok()
+            .flatten();
         if let Some(ref lbl) = label {
             let event_id = uuid::Uuid::new_v4().to_string();
             let _ = sqlx::query(
@@ -321,7 +320,9 @@ pub async fn delete_contact(
     #[cfg(debug_assertions)]
     println!("[API] Deleted contact {}", id);
 
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "deleted": true }),
+    )))
 }
 
 #[derive(Deserialize)]
@@ -350,7 +351,9 @@ pub async fn bulk_delete_contacts(
     #[cfg(debug_assertions)]
     println!("[API] Bulk deleted {} contacts", count);
 
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": count }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "deleted": count }),
+    )))
 }
 
 #[derive(Deserialize)]
@@ -381,7 +384,9 @@ pub async fn bulk_update_status(
     #[cfg(debug_assertions)]
     println!("[API] Bulk updated status for {} contacts", count);
 
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "updated": count }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "updated": count }),
+    )))
 }
 
 async fn search_contacts_query(

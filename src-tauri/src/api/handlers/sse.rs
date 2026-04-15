@@ -1,7 +1,7 @@
 use axum::{
     extract::{Query, State},
-    response::IntoResponse,
     response::sse::{Event, KeepAlive, Sse},
+    response::IntoResponse,
     Json,
 };
 use futures::StreamExt;
@@ -65,7 +65,11 @@ pub async fn sse_message_handler(
         None => {
             #[cfg(debug_assertions)]
             eprintln!("[API Error] SSE session not found: {}", session_id);
-            return (axum::http::StatusCode::NOT_FOUND, "Session not found or expired").into_response();
+            return (
+                axum::http::StatusCode::NOT_FOUND,
+                "Session not found or expired",
+            )
+                .into_response();
         }
     };
 
@@ -79,7 +83,10 @@ pub async fn sse_message_handler(
     if tx.send(event).is_err() {
         sessions.write().await.remove(&session_id);
         #[cfg(debug_assertions)]
-        eprintln!("[API Error] SSE session disconnected, removed: {}", session_id);
+        eprintln!(
+            "[API Error] SSE session disconnected, removed: {}",
+            session_id
+        );
     }
 
     axum::http::StatusCode::ACCEPTED.into_response()
@@ -140,12 +147,10 @@ async fn handle_json_rpc(request: Value, state: &AppState) -> String {
     }
 }
 
-async fn call_tool_via_api(
-    name: &str,
-    args: &Value,
-    state: &AppState,
-) -> Result<String, String> {
-    let api_key = get_api_key(&state.pool).await.ok_or("API key not configured")?;
+async fn call_tool_via_api(name: &str, args: &Value, state: &AppState) -> Result<String, String> {
+    let api_key = get_api_key(&state.pool)
+        .await
+        .ok_or("API key not configured")?;
     let port = get_api_port(&state.pool).await;
     let base = format!("http://127.0.0.1:{}", port);
     let client = reqwest::Client::new();
@@ -171,11 +176,22 @@ async fn call_tool_via_api(
 
         "get_contact" => {
             let id = args["id"].as_str().ok_or("Missing id")?;
-            api_get(&client, &format!("{}/api/v1/contacts/{}", base, id), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/contacts/{}", base, id),
+                &api_key,
+            )
+            .await
         }
 
         "create_contact" => {
-            api_post(&client, &format!("{}/api/v1/contacts", base), &api_key, args).await
+            api_post(
+                &client,
+                &format!("{}/api/v1/contacts", base),
+                &api_key,
+                args,
+            )
+            .await
         }
 
         "update_contact" => {
@@ -184,25 +200,45 @@ async fn call_tool_via_api(
             if let Some(obj) = body.as_object_mut() {
                 obj.remove("id");
             }
-            api_patch(&client, &format!("{}/api/v1/contacts/{}", base, id), &api_key, &body).await
+            api_patch(
+                &client,
+                &format!("{}/api/v1/contacts/{}", base, id),
+                &api_key,
+                &body,
+            )
+            .await
         }
 
         "delete_contact" => {
             let id = args["id"].as_str().ok_or("Missing id")?;
-            api_delete(&client, &format!("{}/api/v1/contacts/{}", base, id), &api_key).await
+            api_delete(
+                &client,
+                &format!("{}/api/v1/contacts/{}", base, id),
+                &api_key,
+            )
+            .await
         }
 
         "search_contacts" => {
             let q = args["q"].as_str().ok_or("Missing q")?;
-            api_get(&client, &format!("{}/api/v1/search?q={}", base, q), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/search?q={}", base, q),
+                &api_key,
+            )
+            .await
         }
 
-        "list_statuses" => {
-            api_get(&client, &format!("{}/api/v1/statuses", base), &api_key).await
-        }
+        "list_statuses" => api_get(&client, &format!("{}/api/v1/statuses", base), &api_key).await,
 
         "create_status" => {
-            api_post(&client, &format!("{}/api/v1/statuses", base), &api_key, args).await
+            api_post(
+                &client,
+                &format!("{}/api/v1/statuses", base),
+                &api_key,
+                args,
+            )
+            .await
         }
 
         "update_status" => {
@@ -211,76 +247,139 @@ async fn call_tool_via_api(
             if let Some(obj) = body.as_object_mut() {
                 obj.remove("id");
             }
-            api_patch(&client, &format!("{}/api/v1/statuses/{}", base, id), &api_key, &body).await
+            api_patch(
+                &client,
+                &format!("{}/api/v1/statuses/{}", base, id),
+                &api_key,
+                &body,
+            )
+            .await
         }
 
         "delete_status" => {
             let id = args["id"].as_str().ok_or("Missing id")?;
-            api_delete(&client, &format!("{}/api/v1/statuses/{}", base, id), &api_key).await
+            api_delete(
+                &client,
+                &format!("{}/api/v1/statuses/{}", base, id),
+                &api_key,
+            )
+            .await
         }
 
-        "list_tags" => {
-            api_get(&client, &format!("{}/api/v1/tags", base), &api_key).await
-        }
+        "list_tags" => api_get(&client, &format!("{}/api/v1/tags", base), &api_key).await,
 
-        "create_tag" => {
-            api_post(&client, &format!("{}/api/v1/tags", base), &api_key, args).await
-        }
+        "create_tag" => api_post(&client, &format!("{}/api/v1/tags", base), &api_key, args).await,
 
         "assign_tag" => {
             let contact_id = args["contact_id"].as_str().ok_or("Missing contact_id")?;
             let tag_id = args["tag_id"].as_str().ok_or("Missing tag_id")?;
-            api_post_empty(&client, &format!("{}/api/v1/contacts/{}/tags/{}", base, contact_id, tag_id), &api_key).await
+            api_post_empty(
+                &client,
+                &format!("{}/api/v1/contacts/{}/tags/{}", base, contact_id, tag_id),
+                &api_key,
+            )
+            .await
         }
 
         "unassign_tag" => {
             let contact_id = args["contact_id"].as_str().ok_or("Missing contact_id")?;
             let tag_id = args["tag_id"].as_str().ok_or("Missing tag_id")?;
-            api_delete(&client, &format!("{}/api/v1/contacts/{}/tags/{}", base, contact_id, tag_id), &api_key).await
+            api_delete(
+                &client,
+                &format!("{}/api/v1/contacts/{}/tags/{}", base, contact_id, tag_id),
+                &api_key,
+            )
+            .await
         }
 
         "list_email_accounts" => {
-            api_get(&client, &format!("{}/api/v1/email-accounts", base), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/email-accounts", base),
+                &api_key,
+            )
+            .await
         }
 
         "send_email" => {
-            api_post(&client, &format!("{}/api/v1/emails/send", base), &api_key, args).await
+            api_post(
+                &client,
+                &format!("{}/api/v1/emails/send", base),
+                &api_key,
+                args,
+            )
+            .await
         }
 
         "schedule_email" => {
-            api_post(&client, &format!("{}/api/v1/emails/schedule", base), &api_key, args).await
+            api_post(
+                &client,
+                &format!("{}/api/v1/emails/schedule", base),
+                &api_key,
+                args,
+            )
+            .await
         }
 
         "list_scheduled_emails" => {
-            api_get(&client, &format!("{}/api/v1/emails/scheduled", base), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/emails/scheduled", base),
+                &api_key,
+            )
+            .await
         }
 
         "cancel_scheduled_email" => {
             let id = args["id"].as_str().ok_or("Missing id")?;
-            api_delete(&client, &format!("{}/api/v1/emails/scheduled/{}", base, id), &api_key).await
+            api_delete(
+                &client,
+                &format!("{}/api/v1/emails/scheduled/{}", base, id),
+                &api_key,
+            )
+            .await
         }
 
         "list_emails_for_contact" => {
             let id = args["id"].as_str().ok_or("Missing id")?;
-            api_get(&client, &format!("{}/api/v1/contacts/{}/emails", base, id), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/contacts/{}/emails", base, id),
+                &api_key,
+            )
+            .await
         }
 
-        "list_templates" => {
-            api_get(&client, &format!("{}/api/v1/templates", base), &api_key).await
-        }
+        "list_templates" => api_get(&client, &format!("{}/api/v1/templates", base), &api_key).await,
 
         "create_template" => {
-            api_post(&client, &format!("{}/api/v1/templates", base), &api_key, args).await
+            api_post(
+                &client,
+                &format!("{}/api/v1/templates", base),
+                &api_key,
+                args,
+            )
+            .await
         }
 
         "delete_template" => {
             let id = args["id"].as_str().ok_or("Missing id")?;
-            api_delete(&client, &format!("{}/api/v1/templates/{}", base, id), &api_key).await
+            api_delete(
+                &client,
+                &format!("{}/api/v1/templates/{}", base, id),
+                &api_key,
+            )
+            .await
         }
 
         "get_contact_activity" => {
             let id = args["id"].as_str().ok_or("Missing id")?;
-            api_get(&client, &format!("{}/api/v1/contacts/{}/activity", base, id), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/contacts/{}/activity", base, id),
+                &api_key,
+            )
+            .await
         }
 
         "create_contact_event" => {
@@ -289,19 +388,33 @@ async fn call_tool_via_api(
             if let Some(obj) = body.as_object_mut() {
                 obj.remove("contact_id");
             }
-            api_post(&client, &format!("{}/api/v1/contacts/{}/events", base, id), &api_key, &body).await
+            api_post(
+                &client,
+                &format!("{}/api/v1/contacts/{}/events", base, id),
+                &api_key,
+                &body,
+            )
+            .await
         }
 
-        "export_data" => {
-            api_get(&client, &format!("{}/api/v1/data/export", base), &api_key).await
-        }
+        "export_data" => api_get(&client, &format!("{}/api/v1/data/export", base), &api_key).await,
 
         "get_pipeline_summary" => {
-            api_get(&client, &format!("{}/api/v1/pipeline-summary", base), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/pipeline-summary", base),
+                &api_key,
+            )
+            .await
         }
 
         "get_overdue_followups" => {
-            api_get(&client, &format!("{}/api/v1/overdue-followups", base), &api_key).await
+            api_get(
+                &client,
+                &format!("{}/api/v1/overdue-followups", base),
+                &api_key,
+            )
+            .await
         }
 
         _ => Err(format!("Unknown tool: {}", name)),
@@ -317,7 +430,9 @@ async fn api_get(client: &reqwest::Client, url: &str, api_key: &str) -> Result<S
         .map_err(|e| format!("HTTP request failed: {}", e))?;
 
     if resp.status().is_success() {
-        resp.text().await.map_err(|e| format!("Failed to read response: {}", e))
+        resp.text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))
     } else {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
@@ -325,7 +440,12 @@ async fn api_get(client: &reqwest::Client, url: &str, api_key: &str) -> Result<S
     }
 }
 
-async fn api_post(client: &reqwest::Client, url: &str, api_key: &str, body: &Value) -> Result<String, String> {
+async fn api_post(
+    client: &reqwest::Client,
+    url: &str,
+    api_key: &str,
+    body: &Value,
+) -> Result<String, String> {
     let resp = client
         .post(url)
         .header("Authorization", format!("Bearer {}", api_key))
@@ -336,7 +456,9 @@ async fn api_post(client: &reqwest::Client, url: &str, api_key: &str, body: &Val
         .map_err(|e| format!("HTTP request failed: {}", e))?;
 
     if resp.status().is_success() {
-        resp.text().await.map_err(|e| format!("Failed to read response: {}", e))
+        resp.text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))
     } else {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
@@ -344,7 +466,11 @@ async fn api_post(client: &reqwest::Client, url: &str, api_key: &str, body: &Val
     }
 }
 
-async fn api_post_empty(client: &reqwest::Client, url: &str, api_key: &str) -> Result<String, String> {
+async fn api_post_empty(
+    client: &reqwest::Client,
+    url: &str,
+    api_key: &str,
+) -> Result<String, String> {
     let resp = client
         .post(url)
         .header("Authorization", format!("Bearer {}", api_key))
@@ -353,7 +479,9 @@ async fn api_post_empty(client: &reqwest::Client, url: &str, api_key: &str) -> R
         .map_err(|e| format!("HTTP request failed: {}", e))?;
 
     if resp.status().is_success() {
-        resp.text().await.map_err(|e| format!("Failed to read response: {}", e))
+        resp.text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))
     } else {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
@@ -361,7 +489,12 @@ async fn api_post_empty(client: &reqwest::Client, url: &str, api_key: &str) -> R
     }
 }
 
-async fn api_patch(client: &reqwest::Client, url: &str, api_key: &str, body: &Value) -> Result<String, String> {
+async fn api_patch(
+    client: &reqwest::Client,
+    url: &str,
+    api_key: &str,
+    body: &Value,
+) -> Result<String, String> {
     let resp = client
         .patch(url)
         .header("Authorization", format!("Bearer {}", api_key))
@@ -372,7 +505,9 @@ async fn api_patch(client: &reqwest::Client, url: &str, api_key: &str, body: &Va
         .map_err(|e| format!("HTTP request failed: {}", e))?;
 
     if resp.status().is_success() {
-        resp.text().await.map_err(|e| format!("Failed to read response: {}", e))
+        resp.text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))
     } else {
         let status = resp.status();
         let body_text = resp.text().await.unwrap_or_default();
@@ -389,7 +524,9 @@ async fn api_delete(client: &reqwest::Client, url: &str, api_key: &str) -> Resul
         .map_err(|e| format!("HTTP request failed: {}", e))?;
 
     if resp.status().is_success() {
-        resp.text().await.map_err(|e| format!("Failed to read response: {}", e))
+        resp.text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))
     } else {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();

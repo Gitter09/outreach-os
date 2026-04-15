@@ -1,9 +1,12 @@
+use crate::api::{
+    error::{ApiError, ApiResponse},
+    AppState,
+};
 use axum::{
     extract::{Path, State},
     Json,
 };
 use serde::Deserialize;
-use crate::api::{AppState, error::{ApiError, ApiResponse}};
 
 pub async fn list_statuses(
     State(state): State<AppState>,
@@ -79,7 +82,9 @@ pub async fn delete_status(
     #[cfg(debug_assertions)]
     println!("[API] Deleted status {}", id);
 
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "deleted": true }),
+    )))
 }
 
 #[derive(Deserialize)]
@@ -106,5 +111,7 @@ pub async fn reorder_statuses(
             .await?;
     }
     tx.commit().await?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "reordered": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "reordered": true }),
+    )))
 }

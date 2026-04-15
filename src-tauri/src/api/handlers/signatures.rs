@@ -1,9 +1,12 @@
+use crate::api::{
+    error::{ApiError, ApiResponse},
+    AppState,
+};
 use axum::{
     extract::{Path, State},
     Json,
 };
 use serde::Deserialize;
-use crate::api::{AppState, error::{ApiError, ApiResponse}};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
@@ -57,5 +60,7 @@ pub async fn delete_signature(
         .bind(&id)
         .execute(&state.pool)
         .await?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "deleted": true }),
+    )))
 }

@@ -1,7 +1,7 @@
 pub mod contacts;
 pub mod data;
-pub mod events;
 pub mod emails;
+pub mod events;
 pub mod files;
 pub mod import;
 pub mod search;

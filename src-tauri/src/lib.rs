@@ -69,7 +69,6 @@ fn extract_linkedin_slug(url: &str) -> Option<&str> {
         .map(|s| s.split('?').next().unwrap_or(s))
 }
 
-
 #[derive(serde::Serialize)]
 struct ContactWithTags {
     #[serde(flatten)]
@@ -106,8 +105,7 @@ async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, 
         "#,
     )
     .fetch_all(pool)
-    .await
-    ?;
+    .await?;
 
     // 3. Group Tags by Contact ID
     use std::collections::HashMap;
@@ -161,8 +159,7 @@ async fn get_contact_by_id(
     )
     .bind(&id)
     .fetch_all(pool)
-    .await
-    ?;
+    .await?;
 
     Ok(ContactWithTags { contact, tags })
 }
@@ -176,8 +173,7 @@ async fn get_statuses(
         "SELECT id, label, color, position, is_default FROM statuses ORDER BY position ASC",
     )
     .fetch_all(pool)
-    .await
-    ?;
+    .await?;
     Ok(statuses)
 }
 
@@ -379,12 +375,11 @@ async fn update_contact(db: tauri::State<'_, Db>, args: UpdateContactArgs) -> Re
     // Write a status_change activity event when status_id is explicitly changed.
     // Errors here are intentionally ignored — the contact update already succeeded.
     if let Some(ref sid) = args.status_id {
-        let label: Option<String> =
-            sqlx::query_scalar("SELECT label FROM statuses WHERE id = ?")
-                .bind(sid)
-                .fetch_optional(pool)
-                .await
-                .unwrap_or(None);
+        let label: Option<String> = sqlx::query_scalar("SELECT label FROM statuses WHERE id = ?")
+            .bind(sid)
+            .fetch_optional(pool)
+            .await
+            .unwrap_or(None);
         if let Some(ref label) = label {
             log_activity_event(pool, &args.id, &format!("Moved to {}", label)).await;
         }
@@ -399,8 +394,7 @@ async fn clear_contact_next_date(db: tauri::State<'_, Db>, id: String) -> Result
     sqlx::query("UPDATE contacts SET next_contact_date = NULL WHERE id = ?")
         .bind(&id)
         .execute(pool)
-        .await
-        ?;
+        .await?;
     Ok(())
 }
 
@@ -613,7 +607,9 @@ pub fn run() {
                     let _ = window.hide();
                 } else {
                     scheduler::stop_email_scheduler();
-                    if let Some(shutdown_tx) = window.try_state::<Mutex<tokio::sync::broadcast::Sender<()>>>() {
+                    if let Some(shutdown_tx) =
+                        window.try_state::<Mutex<tokio::sync::broadcast::Sender<()>>>()
+                    {
                         let _ = shutdown_tx.lock().unwrap().send(());
                     }
                 }
@@ -632,8 +628,7 @@ async fn fix_orphan_contacts(db: tauri::State<'_, Db>) -> Result<String, AppErro
     // the user intentionally deleted.
     let status_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM statuses")
         .fetch_one(pool)
-        .await
-        ?;
+        .await?;
 
     if status_count == 0 {
         sqlx::query(
@@ -901,7 +896,12 @@ async fn email_schedule(
         .await
         .map_err(|e| AppError::from(e.to_string()))?;
 
-    log_activity_event(db.pool(), &contact_id, &format!("Email scheduled: {}", subject)).await;
+    log_activity_event(
+        db.pool(),
+        &contact_id,
+        &format!("Email scheduled: {}", subject),
+    )
+    .await;
 
     Ok(result)
 }
@@ -1272,9 +1272,7 @@ async fn save_api_key(
     #[cfg(debug_assertions)]
     println!("--- [DB Debug] Saving key for service: {} ---", service);
     let manager = jobdex_core::settings::SettingsManager::new(db.pool().clone());
-    manager
-        .set(&service, &key)
-        .await?;
+    manager.set(&service, &key).await?;
     #[cfg(debug_assertions)]
     println!("--- [DB Debug] Key saved successfully ---");
     Ok(())
@@ -2074,8 +2072,12 @@ fn is_contact_duplicate(
             return true;
         }
     }
-    if existing.first_name.eq_ignore_ascii_case(&candidate.first_name)
-        && existing.last_name.eq_ignore_ascii_case(&candidate.last_name)
+    if existing
+        .first_name
+        .eq_ignore_ascii_case(&candidate.first_name)
+        && existing
+            .last_name
+            .eq_ignore_ascii_case(&candidate.last_name)
     {
         if let (Some(c1), Some(c2)) = (&existing.company, &candidate.company) {
             let c1: &str = c1;
@@ -2285,10 +2287,10 @@ async fn update_contacts_status_bulk(
 
     for id in ids {
         let result = sqlx::query("UPDATE contacts SET status_id = ? WHERE id = ?")
-        .bind(&status_id)
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
+            .bind(&status_id)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
         affected_count += result.rows_affected();
     }
 

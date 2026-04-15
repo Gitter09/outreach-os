@@ -1,8 +1,8 @@
-use axum::{
-    extract::State,
-    Json,
+use crate::api::{
+    error::{ApiError, ApiResponse},
+    AppState,
 };
-use crate::api::{AppState, error::{ApiError, ApiResponse}};
+use axum::{extract::State, Json};
 
 pub async fn export_data(
     State(state): State<AppState>,
@@ -49,24 +49,50 @@ pub async fn clear_data(
     let pool = &state.pool;
     let mut tx = pool.begin().await?;
 
-    sqlx::query("DELETE FROM contact_events").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM contact_files").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM contact_tags").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM email_attachments").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM email_messages").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM email_threads").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM scheduled_emails").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM email_accounts").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM contacts").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM statuses").execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM contact_events")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM contact_files")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM contact_tags")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_attachments")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_messages")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_threads")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM scheduled_emails")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_accounts")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM contacts")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM statuses")
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM tags").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM email_templates").execute(&mut *tx).await?;
-    sqlx::query("DELETE FROM email_signatures").execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM email_templates")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM email_signatures")
+        .execute(&mut *tx)
+        .await?;
 
     tx.commit().await?;
 
     #[cfg(debug_assertions)]
     println!("[API] All data cleared");
 
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "cleared": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "cleared": true }),
+    )))
 }

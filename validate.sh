@@ -9,7 +9,12 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# Get the directory where the script is located
+PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$PROJECT_ROOT"
+
 echo -e "${BLUE}Starting JobDex Validation Pipeline...${NC}\n"
+echo -e "${BLUE}Project Root: $PROJECT_ROOT${NC}\n"
 
 # 1. Frontend Validation (TypeScript)
 echo -e "${BLUE}[1/3] Checking TypeScript types...${NC}"

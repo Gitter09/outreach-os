@@ -1,9 +1,12 @@
+use crate::api::{
+    error::{ApiError, ApiResponse},
+    AppState,
+};
 use axum::{
     extract::{Path, State},
     Json,
 };
 use serde::Deserialize;
-use crate::api::{AppState, error::{ApiError, ApiResponse}};
 
 pub async fn list_events(
     State(state): State<AppState>,
@@ -96,5 +99,7 @@ pub async fn delete_event(
         .bind(&event_id)
         .execute(&state.pool)
         .await?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "deleted": true }),
+    )))
 }

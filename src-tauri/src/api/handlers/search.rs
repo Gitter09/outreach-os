@@ -1,10 +1,13 @@
+use super::contacts::{ContactWithTags, TagAssignmentRow, TagBrief};
+use crate::api::{
+    error::{ApiError, ApiResponse},
+    AppState,
+};
 use axum::{
     extract::{Query, State},
     Json,
 };
 use serde::{Deserialize, Serialize};
-use crate::api::{AppState, error::{ApiError, ApiResponse}};
-use super::contacts::{ContactWithTags, TagBrief, TagAssignmentRow};
 
 #[derive(Deserialize)]
 pub struct SearchQuery {
@@ -54,12 +57,17 @@ pub async fn search(
             .fetch_all(pool)
             .await?;
 
-            let mut tags_by_contact: std::collections::HashMap<String, Vec<TagBrief>> = std::collections::HashMap::new();
+            let mut tags_by_contact: std::collections::HashMap<String, Vec<TagBrief>> =
+                std::collections::HashMap::new();
             for a in assignments {
                 tags_by_contact
                     .entry(a.contact_id)
                     .or_default()
-                    .push(TagBrief { id: a.id, name: a.name, color: a.color });
+                    .push(TagBrief {
+                        id: a.id,
+                        name: a.name,
+                        color: a.color,
+                    });
             }
 
             for c in &mut contacts {

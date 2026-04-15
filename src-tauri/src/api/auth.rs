@@ -1,11 +1,7 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    middleware::Next,
-    response::Response,
-    extract::Request,
-};
 use crate::api::AppState;
+use axum::{
+    extract::Request, extract::State, http::StatusCode, middleware::Next, response::Response,
+};
 
 pub async fn auth_middleware(
     State(state): State<AppState>,
@@ -25,10 +21,7 @@ pub async fn auth_middleware(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    let token = auth_header
-        .strip_prefix("Bearer ")
-        .unwrap_or("")
-        .trim();
+    let token = auth_header.strip_prefix("Bearer ").unwrap_or("").trim();
 
     if token.is_empty() {
         #[cfg(debug_assertions)]

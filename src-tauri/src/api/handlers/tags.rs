@@ -1,9 +1,12 @@
+use crate::api::{
+    error::{ApiError, ApiResponse},
+    AppState,
+};
 use axum::{
     extract::{Path, State},
     Json,
 };
 use serde::Deserialize;
-use crate::api::{AppState, error::{ApiError, ApiResponse}};
 
 pub async fn list_tags(
     State(state): State<AppState>,
@@ -47,12 +50,14 @@ pub async fn update_tag(
     Path(id): Path<String>,
     Json(body): Json<UpdateTagBody>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
-    sqlx::query("UPDATE tags SET name = COALESCE(?, name), color = COALESCE(?, color) WHERE id = ?")
-        .bind(&body.name)
-        .bind(&body.color)
-        .bind(&id)
-        .execute(&state.pool)
-        .await?;
+    sqlx::query(
+        "UPDATE tags SET name = COALESCE(?, name), color = COALESCE(?, color) WHERE id = ?",
+    )
+    .bind(&body.name)
+    .bind(&body.color)
+    .bind(&id)
+    .execute(&state.pool)
+    .await?;
     Ok(Json(ApiResponse::ok(serde_json::json!({ "id": id }))))
 }
 
@@ -64,7 +69,9 @@ pub async fn delete_tag(
         .bind(&id)
         .execute(&state.pool)
         .await?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "deleted": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "deleted": true }),
+    )))
 }
 
 pub async fn assign_tag(
@@ -77,7 +84,9 @@ pub async fn assign_tag(
         .bind(&tag_id)
         .execute(&state.pool)
         .await?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "assigned": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "assigned": true }),
+    )))
 }
 
 pub async fn unassign_tag(
@@ -90,5 +99,7 @@ pub async fn unassign_tag(
         .bind(&tag_id)
         .execute(&state.pool)
         .await?;
-    Ok(Json(ApiResponse::ok(serde_json::json!({ "unassigned": true }))))
+    Ok(Json(ApiResponse::ok(
+        serde_json::json!({ "unassigned": true }),
+    )))
 }
