@@ -1,0 +1,22 @@
+# .opencodeignore - Stop token hemorrhage
+.git/
+.github/
+
+# Node/React Frontend Bloat
+node_modules/
+dist/
+build/
+.vite/
+
+# Rust Backend Bloat (Massive binary folders)
+target/
+src-tauri/target/
+src-core/target/
+Cargo.lock
+
+# Landing Page (Unless you are actively editing the website, keep this ignored)
+docs/
+
+# Images/Media
+src/assets/
+src-tauri/icons/
