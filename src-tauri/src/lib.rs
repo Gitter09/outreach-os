@@ -645,19 +645,17 @@ pub fn run() {
                     // launch which starts in Accessory mode).
                     tray::show_main_window(app);
                 }
-                tauri::RunEvent::ExitRequested { code, api, .. } => {
+                tauri::RunEvent::ExitRequested { code, api, .. } if code.is_none() && !tray::should_exit() => {
                     // Safety net for non-macOS platforms or edge cases where all
                     // windows are destroyed. On macOS, Cmd+Q is intercepted by
                     // the terminate: swizzle (tray.rs) before this fires.
-                    if code.is_none() && !tray::should_exit() {
-                        api.prevent_exit();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.hide();
-                        }
-                        #[cfg(target_os = "macos")]
-                        {
-                            let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-                        }
+                    api.prevent_exit();
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                    #[cfg(target_os = "macos")]
+                    {
+                        let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
                     }
                 }
                 _ => {}
