@@ -183,7 +183,7 @@ pub mod models {
         pub updated_at: DateTime<Utc>,
     }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+    #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
     pub struct EmailMessage {
         pub id: String,
         pub thread_id: String,

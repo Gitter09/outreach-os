@@ -520,7 +520,6 @@ pub struct RawAttachment {
     pub data: Vec<u8>,
 }
 
-
 fn extract_code_and_state_from_request(request_line: &str) -> Option<(String, String)> {
     let url_part = request_line.split_whitespace().nth(1)?;
     let url = url::Url::parse(&format!("http://localhost{}", url_part)).ok()?;

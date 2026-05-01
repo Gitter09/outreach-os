@@ -44,7 +44,9 @@ struct TagAssignment {
 }
 
 /// Fetches all contacts with their status labels/colors and enriches them with tags.
-pub async fn get_all_contacts_with_tags(pool: &SqlitePool) -> Result<Vec<ContactWithTags>, sqlx::Error> {
+pub async fn get_all_contacts_with_tags(
+    pool: &SqlitePool,
+) -> Result<Vec<ContactWithTags>, sqlx::Error> {
     let sql = format!("{} ORDER BY c.updated_at DESC", CONTACT_SELECT_BASE);
     let contacts = sqlx::query_as::<sqlx::Sqlite, Contact>(&sql)
         .fetch_all(pool)
@@ -90,15 +92,12 @@ pub async fn enrich_with_tags(
 
     let mut tags_by_contact: HashMap<String, Vec<Tag>> = HashMap::new();
     for a in assignments {
-        tags_by_contact
-            .entry(a.contact_id)
-            .or_default()
-            .push(Tag {
-                id: a.id,
-                name: a.name,
-                color: a.color,
-                created_at: a.created_at,
-            });
+        tags_by_contact.entry(a.contact_id).or_default().push(Tag {
+            id: a.id,
+            name: a.name,
+            color: a.color,
+            created_at: a.created_at,
+        });
     }
 
     let result: Vec<ContactWithTags> = contacts

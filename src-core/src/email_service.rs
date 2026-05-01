@@ -383,7 +383,7 @@ impl EmailService {
                     || e.to_string().contains("Token refresh failed");
                 // get_account failed so we have no account struct; fetch email directly
                 let account_email = sqlx::query_scalar::<_, String>(
-                    "SELECT email FROM email_accounts WHERE id = ?"
+                    "SELECT email FROM email_accounts WHERE id = ?",
                 )
                 .bind(account_id)
                 .fetch_optional(self.db.pool())
@@ -515,8 +515,16 @@ impl EmailService {
 
         // 5. Process each message
 
-        for (provider_msg_id, from_email, to_email, subject, body, html_body, sent_at, raw_attachments) in
-            messages_result
+        for (
+            provider_msg_id,
+            from_email,
+            to_email,
+            subject,
+            body,
+            html_body,
+            sent_at,
+            raw_attachments,
+        ) in messages_result
         {
             let from_lower = from_email.to_lowercase();
             let to_lower = to_email.to_lowercase();

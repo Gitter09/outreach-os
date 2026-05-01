@@ -5,7 +5,10 @@ use std::io::Write;
 use tokio::io::AsyncBufReadExt;
 
 #[derive(Parser, Debug)]
-#[command(name = "jobdex-mcp", about = "JobDex MCP Server — stdio JSON-RPC relay")]
+#[command(
+    name = "jobdex-mcp",
+    about = "JobDex MCP Server — stdio JSON-RPC relay"
+)]
 struct Args {
     #[arg(long, env = "JOBDEX_API_URL")]
     api_url: String,
@@ -405,12 +408,24 @@ fn build_url_for_tool(name: &str, args: &Value, base_url: &str) -> String {
 
 fn http_method_for_tool(name: &str) -> &'static str {
     match name {
-        "list_contacts" | "list_statuses" | "list_tags" | "list_email_accounts"
-        | "list_scheduled_emails" | "list_emails_for_contact" | "list_templates"
-        | "search_contacts" | "get_contact" | "get_contact_activity"
-        | "export_data" | "get_pipeline_summary" | "get_overdue_followups" => "GET",
-        "delete_contact" | "delete_status" | "cancel_scheduled_email"
-        | "unassign_tag" | "delete_template" => "DELETE",
+        "list_contacts"
+        | "list_statuses"
+        | "list_tags"
+        | "list_email_accounts"
+        | "list_scheduled_emails"
+        | "list_emails_for_contact"
+        | "list_templates"
+        | "search_contacts"
+        | "get_contact"
+        | "get_contact_activity"
+        | "export_data"
+        | "get_pipeline_summary"
+        | "get_overdue_followups" => "GET",
+        "delete_contact"
+        | "delete_status"
+        | "cancel_scheduled_email"
+        | "unassign_tag"
+        | "delete_template" => "DELETE",
         _ => "POST",
     }
 }
@@ -516,16 +531,31 @@ async fn main() -> Result<()> {
                         if params.is_empty() {
                             client.get(&url).bearer_auth(&args.api_key).send().await
                         } else {
-                            client.get(&url).bearer_auth(&args.api_key).query(&params).send().await
+                            client
+                                .get(&url)
+                                .bearer_auth(&args.api_key)
+                                .query(&params)
+                                .send()
+                                .await
                         }
                     }
                     "DELETE" => client.delete(&url).bearer_auth(&args.api_key).send().await,
-                    _ => client.post(&url).bearer_auth(&args.api_key).json(arguments).send().await,
+                    _ => {
+                        client
+                            .post(&url)
+                            .bearer_auth(&args.api_key)
+                            .json(arguments)
+                            .send()
+                            .await
+                    }
                 };
 
                 match result {
                     Ok(resp) => {
-                        let body: String = resp.text().await.unwrap_or_else(|e| format!("Error reading response: {}", e));
+                        let body: String = resp
+                            .text()
+                            .await
+                            .unwrap_or_else(|e| format!("Error reading response: {}", e));
                         json!({
                             "jsonrpc": "2.0",
                             "id": id,

@@ -164,7 +164,7 @@ impl OutlookClient {
             ("grant_type", "authorization_code"),
             ("redirect_uri", redirect_url.as_str()),
         ];
-        
+
         if let Some(ref sec) = client_secret {
             params.push(("client_secret", sec.as_str()));
         }
