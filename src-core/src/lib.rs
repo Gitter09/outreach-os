@@ -1,3 +1,4 @@
+pub mod contacts;
 pub mod crypto;
 pub mod db;
 pub mod email_service;
@@ -7,6 +8,7 @@ pub mod oauth_html;
 pub mod outlook;
 pub mod settings;
 
+pub use contacts::{ContactWithTags, CONTACT_SELECT_BASE};
 pub use db::models;
 pub use db::Db;
 pub use email_service::{EmailService, SyncResult};

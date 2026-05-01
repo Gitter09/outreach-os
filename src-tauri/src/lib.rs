@@ -14,32 +14,12 @@ mod error;
 use error::AppError;
 #[cfg(target_os = "macos")]
 mod launchagent;
+mod mcp_config;
 mod scheduler;
 mod tray;
 mod utils;
 
-/// Shared SELECT base for fetching contacts with status JOIN and effective_next_date.
-/// Append `WHERE c.id = ?` or `ORDER BY ...` to complete the query.
-const CONTACT_SELECT_BASE: &str = r#"
-    SELECT
-        c.*,
-        s.label AS status_label,
-        s.color AS status_color,
-        (
-            SELECT MIN(d)
-            FROM (
-                SELECT c.next_contact_date AS d WHERE c.next_contact_date IS NOT NULL
-                UNION ALL
-                SELECT MIN(event_at) AS d
-                FROM contact_events
-                WHERE contact_id = c.id
-                  AND event_type = 'user_event'
-                  AND event_at >= CURRENT_TIMESTAMP
-            )
-        ) AS effective_next_date
-    FROM contacts c
-    LEFT JOIN statuses s ON c.status_id = s.id
-"#;
+use jobdex_core::contacts::ContactWithTags;
 
 /// Returns the ID of the first status by position, or an error if none exist.
 async fn fetch_default_status_id(pool: &sqlx::SqlitePool) -> Result<String, AppError> {
@@ -77,69 +57,10 @@ fn extract_linkedin_slug(url: &str) -> Option<&str> {
         .map(|s| s.split('?').next().unwrap_or(s))
 }
 
-#[derive(serde::Serialize)]
-struct ContactWithTags {
-    #[serde(flatten)]
-    contact: jobdex_core::models::Contact,
-    tags: Vec<jobdex_core::models::Tag>,
-}
-
 #[tauri::command]
 async fn get_contacts(db: tauri::State<'_, Db>) -> Result<Vec<ContactWithTags>, AppError> {
     let pool = db.pool();
-
-    // 1. Fetch Contacts
-    let sql = format!("{} ORDER BY c.updated_at DESC", CONTACT_SELECT_BASE);
-    let contacts = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(&sql)
-        .fetch_all(pool)
-        .await?;
-
-    // 2. Fetch All Tag Assignments
-    // We fetch (contact_id, tag_id, tag_name, tag_color)
-    #[derive(sqlx::FromRow)]
-    struct TagAssignment {
-        contact_id: String,
-        id: String,
-        name: String,
-        color: String,
-        created_at: chrono::DateTime<chrono::Utc>,
-    }
-
-    let assignments = sqlx::query_as::<sqlx::Sqlite, TagAssignment>(
-        r#"
-        SELECT ct.contact_id, t.* 
-        FROM tags t 
-        JOIN contact_tags ct ON t.id = ct.tag_id
-        "#,
-    )
-    .fetch_all(pool)
-    .await?;
-
-    // 3. Group Tags by Contact ID
-    use std::collections::HashMap;
-    let mut tags_by_contact: HashMap<String, Vec<jobdex_core::models::Tag>> = HashMap::new();
-
-    for a in assignments {
-        tags_by_contact
-            .entry(a.contact_id)
-            .or_default()
-            .push(jobdex_core::models::Tag {
-                id: a.id,
-                name: a.name,
-                color: a.color,
-                created_at: a.created_at,
-            });
-    }
-
-    // 4. Merge
-    let result: Vec<ContactWithTags> = contacts
-        .into_iter()
-        .map(|c| {
-            let tags = tags_by_contact.remove(&c.id).unwrap_or_default();
-            ContactWithTags { contact: c, tags }
-        })
-        .collect();
-
+    let result = jobdex_core::contacts::get_all_contacts_with_tags(pool).await?;
     Ok(result)
 }
 
@@ -149,27 +70,10 @@ async fn get_contact_by_id(
     id: String,
 ) -> Result<ContactWithTags, AppError> {
     let pool = db.pool();
-
-    let sql = format!("{} WHERE c.id = ?", CONTACT_SELECT_BASE);
-    let contact = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(&sql)
-        .bind(&id)
-        .fetch_optional(pool)
+    let result = jobdex_core::contacts::get_contact_by_id_with_tags(pool, &id)
         .await?
         .ok_or_else(|| AppError::Validation(format!("Contact '{}' not found", id)))?;
-
-    let tags = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Tag>(
-        r#"
-        SELECT t.*
-        FROM tags t
-        JOIN contact_tags ct ON t.id = ct.tag_id
-        WHERE ct.contact_id = ?
-        "#,
-    )
-    .bind(&id)
-    .fetch_all(pool)
-    .await?;
-
-    Ok(ContactWithTags { contact, tags })
+    Ok(result)
 }
 
 #[tauri::command]
@@ -617,7 +521,11 @@ pub fn run() {
             disable_background_service,
             is_background_service_enabled,
             generate_api_key,
-            get_api_status
+            get_api_status,
+            detect_ai_tools,
+            configure_ai_tool,
+            remove_ai_tool_config,
+            get_mcp_binary_path
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -1387,7 +1295,7 @@ async fn export_all_data(db: tauri::State<'_, Db>) -> Result<String, AppError> {
     let contacts = sqlx::query_as::<sqlx::Sqlite, jobdex_core::models::Contact>(
         r#"
         SELECT
-            c.id, c.company_id, c.first_name, c.last_name, c.email, c.linkedin_url,
+            c.id, c.first_name, c.last_name, c.email, c.linkedin_url,
             c.title, c.company, c.location, c.company_website, c.status_id,
             s.label as status_label, s.color as status_color,
             c.intelligence_summary, c.last_interaction_at, c.last_contacted_date,
@@ -2200,6 +2108,8 @@ async fn import_contacts(
         vec![]
     };
 
+    let default_status_id = fetch_default_status_id(pool).await?;
+
     let mut imported = 0;
     let mut skipped = 0;
     let mut merged = 0;
@@ -2218,7 +2128,6 @@ async fn import_contacts(
 
         if let Some(id) = duplicate_id {
             if mode == "merge" {
-                // Merge Logic: Update fields only if they are missing in DB
                 let result = sqlx::query(
                     r#"
                     UPDATE contacts SET
@@ -2243,22 +2152,21 @@ async fn import_contacts(
                 .execute(pool)
                 .await;
 
-                if result.is_ok() {
-                    merged += 1;
-                } else {
-                    failed += 1;
-                    errors.push(format!(
-                        "Failed to merge contact: {} {}",
-                        contact.first_name, contact.last_name
-                    ));
+                match result {
+                    Ok(_) => merged += 1,
+                    Err(e) => {
+                        failed += 1;
+                        errors.push(format!(
+                            "Failed to merge '{} {}': {}",
+                            contact.first_name, contact.last_name, e
+                        ));
+                    }
                 }
             } else {
                 skipped += 1;
             }
         } else {
-            // Insert New - use position-based default status (top of the list)
             let id = uuid::Uuid::new_v4().to_string();
-            let status_id: String = fetch_default_status_id(pool).await?;
 
             let result = sqlx::query(
                 "INSERT INTO contacts (id, first_name, last_name, email, linkedin_url, company, title, location, company_website, intelligence_summary, status_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -2273,18 +2181,19 @@ async fn import_contacts(
                 .bind(&contact.location)
                 .bind(&contact.company_website)
                 .bind(&contact.intelligence_summary)
-                .bind(&status_id)
+                .bind(&default_status_id)
                 .execute(pool)
                 .await;
 
-            if result.is_ok() {
-                imported += 1;
-            } else {
-                failed += 1;
-                errors.push(format!(
-                    "Failed to import contact: {} {}",
-                    contact.first_name, contact.last_name
-                ));
+            match result {
+                Ok(_) => imported += 1,
+                Err(e) => {
+                    failed += 1;
+                    errors.push(format!(
+                        "Failed to import '{} {}': {}",
+                        contact.first_name, contact.last_name, e
+                    ));
+                }
             }
         }
     }
@@ -2868,4 +2777,46 @@ async fn get_api_status(db: tauri::State<'_, Db>) -> Result<ApiStatus, AppError>
         port,
         key_set,
     })
+}
+
+// ===== MCP Config Commands =====
+
+#[tauri::command]
+async fn detect_ai_tools() -> Result<Vec<mcp_config::ToolStatus>, AppError> {
+    Ok(mcp_config::detect_all_tools())
+}
+
+#[tauri::command]
+async fn configure_ai_tool(tool: String, db: tauri::State<'_, Db>) -> Result<(), AppError> {
+    let ai_tool = mcp_config::AiTool::from_id(&tool)
+        .ok_or_else(|| AppError::Validation(format!("Unknown tool: {}", tool)))?;
+
+    let manager = jobdex_core::settings::SettingsManager::new(db.pool().clone());
+
+    let api_key = manager
+        .get("api_key")
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?
+        .ok_or_else(|| AppError::Validation("No API key set. Generate one first.".into()))?;
+
+    let port: u16 = manager
+        .get("api_port")
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(13420);
+
+    mcp_config::configure_tool(ai_tool, &api_key, port)
+}
+
+#[tauri::command]
+async fn remove_ai_tool_config(tool: String) -> Result<(), AppError> {
+    let ai_tool = mcp_config::AiTool::from_id(&tool)
+        .ok_or_else(|| AppError::Validation(format!("Unknown tool: {}", tool)))?;
+    mcp_config::remove_tool_config(ai_tool)
+}
+
+#[tauri::command]
+async fn get_mcp_binary_path() -> Result<Option<String>, AppError> {
+    Ok(mcp_config::get_sidecar_path().map(|p| p.to_string_lossy().to_string()))
 }

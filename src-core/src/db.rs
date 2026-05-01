@@ -122,7 +122,6 @@ pub mod models {
     #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
     pub struct Contact {
         pub id: String,
-        pub company_id: Option<String>,
         pub first_name: String,
         pub last_name: String,
         pub email: Option<String>,
@@ -134,15 +133,14 @@ pub mod models {
         pub company_website: Option<String>,
 
         pub status_id: Option<String>,
-        pub status_label: Option<String>, // populated via LEFT JOIN to statuses
-        pub status_color: Option<String>, // populated via LEFT JOIN to statuses
+        pub status_label: Option<String>,
+        pub status_color: Option<String>,
 
         #[serde(rename = "summary")]
         pub intelligence_summary: Option<String>,
 
-        // Dates & Cadence
-        pub last_interaction_at: Option<DateTime<Utc>>, // kept for history
-        pub last_contacted_date: Option<DateTime<Utc>>, // explicit field
+        pub last_interaction_at: Option<DateTime<Utc>>,
+        pub last_contacted_date: Option<DateTime<Utc>>,
         pub next_contact_date: Option<DateTime<Utc>>,
         pub effective_next_date: Option<DateTime<Utc>>,
         pub next_contact_event: Option<String>,

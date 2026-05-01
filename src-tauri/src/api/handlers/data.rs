@@ -9,7 +9,7 @@ pub async fn export_data(
 ) -> Result<Json<ApiResponse<serde_json::Value>>, ApiError> {
     let pool = &state.pool;
     let contacts = sqlx::query_as::<_, jobdex_core::models::Contact>(
-        r#"SELECT c.id, c.company_id, c.first_name, c.last_name, c.email, c.linkedin_url,
+        r#"SELECT c.id, c.first_name, c.last_name, c.email, c.linkedin_url,
            c.title, c.company, c.location, c.company_website, c.status_id,
            s.label as status_label, s.color as status_color,
            c.intelligence_summary, c.last_interaction_at, c.last_contacted_date,

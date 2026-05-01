@@ -9,6 +9,9 @@ use std::collections::HashMap;
 use crate::api::error::{ApiError, ApiResponse};
 use crate::api::AppState;
 
+/// Re-export the shared SQL query base from src-core.
+const CONTACT_SELECT_BASE: &str = jobdex_core::contacts::CONTACT_SELECT_BASE;
+
 #[derive(Debug, Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct ContactWithTags {
@@ -51,31 +54,6 @@ pub struct TagAssignmentRow {
     pub name: String,
     pub color: String,
 }
-
-const CONTACT_SELECT_BASE: &str = r#"
-    SELECT
-        c.id, c.first_name, c.last_name, c.email, c.linkedin_url,
-        c.title, c.company, c.location, c.company_website, c.status_id,
-        s.label AS status_label, s.color AS status_color,
-        c.intelligence_summary, c.last_contacted_date,
-        c.next_contact_date,
-        (
-            SELECT MIN(d)
-            FROM (
-                SELECT c.next_contact_date AS d WHERE c.next_contact_date IS NOT NULL
-                UNION ALL
-                SELECT MIN(event_at) AS d
-                FROM contact_events
-                WHERE contact_id = c.id
-                  AND event_type = 'user_event'
-                  AND event_at >= CURRENT_TIMESTAMP
-            )
-        ) AS effective_next_date,
-        c.next_contact_event,
-        c.cadence_stage, c.created_at, c.updated_at
-    FROM contacts c
-    LEFT JOIN statuses s ON c.status_id = s.id
-"#;
 
 #[derive(Deserialize)]
 pub struct ListContactsQuery {
@@ -181,10 +159,7 @@ pub async fn create_contact(
         .await?;
 
     #[cfg(debug_assertions)]
-    println!(
-        "[API] Created contact {} '{} {}'",
-        id, body.first_name, body.last_name
-    );
+    println!("[API] Created contact {} '{} {}'", id, body.first_name, body.last_name);
 
     Ok(Json(ApiResponse::ok(serde_json::json!({ "id": id }))))
 }
@@ -282,6 +257,7 @@ pub async fn update_contact(
     }
 
     #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     println!("[API] Updated contact {}", id);
 
     Ok(Json(ApiResponse::ok(serde_json::json!({ "id": id }))))
@@ -318,6 +294,7 @@ pub async fn delete_contact(
     tx.commit().await?;
 
     #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
     println!("[API] Deleted contact {}", id);
 
     Ok(Json(ApiResponse::ok(
@@ -348,6 +325,7 @@ pub async fn bulk_delete_contacts(
 
     tx.commit().await?;
 
+    #[cfg(debug_assertions)]
     #[cfg(debug_assertions)]
     println!("[API] Bulk deleted {} contacts", count);
 
@@ -381,6 +359,7 @@ pub async fn bulk_update_status(
 
     tx.commit().await?;
 
+    #[cfg(debug_assertions)]
     #[cfg(debug_assertions)]
     println!("[API] Bulk updated status for {} contacts", count);
 
